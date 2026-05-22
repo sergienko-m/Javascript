@@ -1,0 +1,890 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ПР6 Частина 2 · Варіант 1 — Kanban Board</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #111318;
+      --header-bg: #16181f;
+      --col-bg: #1a1d26;
+      --col-border: #252833;
+      --card-bg: #21242f;
+      --card-hover: #272b38;
+      --card-border: #2e3244;
+      --accent: #5b6cf9;
+      --accent2: #f96b8a;
+      --text: #e8eaf2;
+      --muted: #636880;
+      --muted2: #4a4e63;
+      --todo: #5b6cf9;
+      --inprogress: #f9a86b;
+      --done: #4ade80;
+      --high: #f96b8a;
+      --medium: #f9a86b;
+      --low: #4ade80;
+      --font: 'Space Grotesk', sans-serif;
+      --mono: 'JetBrains Mono', monospace;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--font);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* ─── App Header ─── */
+    .app-header {
+      background: var(--header-bg);
+      border-bottom: 1px solid var(--col-border);
+      padding: 0 24px;
+      height: 60px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      position: sticky;
+      top: 0;
+      z-index: 50;
+    }
+    .app-logo {
+      font-size: 16px;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .app-logo .dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: var(--accent);
+      box-shadow: 0 0 10px var(--accent);
+    }
+
+    .header-controls {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .search-wrap {
+      position: relative;
+    }
+    .search-wrap input {
+      background: var(--col-bg);
+      border: 1px solid var(--col-border);
+      border-radius: 8px;
+      color: var(--text);
+      font-family: var(--font);
+      font-size: 13px;
+      padding: 7px 12px 7px 34px;
+      outline: none;
+      width: 200px;
+      transition: border-color .2s, width .3s;
+    }
+    .search-wrap input:focus { border-color: var(--accent); width: 240px; }
+    .search-wrap .si {
+      position: absolute;
+      left: 10px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: var(--muted);
+      font-size: 14px;
+      pointer-events: none;
+    }
+
+    .filter-select {
+      background: var(--col-bg);
+      border: 1px solid var(--col-border);
+      border-radius: 8px;
+      color: var(--text);
+      font-family: var(--font);
+      font-size: 12px;
+      padding: 7px 10px;
+      outline: none;
+      cursor: pointer;
+    }
+
+    .btn {
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      font-family: var(--font);
+      font-size: 13px;
+      font-weight: 600;
+      padding: 7px 14px;
+      transition: opacity .2s, transform .1s;
+    }
+    .btn:hover { opacity: .88; }
+    .btn:active { transform: scale(.97); }
+    .btn-primary { background: var(--accent); color: #fff; }
+    .btn-ghost { background: transparent; color: var(--muted); border: 1px solid var(--col-border); }
+    .btn-danger { background: rgba(249,107,138,.15); color: var(--high); border: 1px solid rgba(249,107,138,.25); }
+    .btn-sm { padding: 5px 10px; font-size: 11px; }
+
+    /* ─── Board ─── */
+    .board {
+      flex: 1;
+      padding: 24px;
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 16px;
+      align-items: start;
+      overflow-x: auto;
+    }
+    @media (max-width: 860px) {
+      .board { grid-template-columns: 1fr; }
+    }
+
+    /* ─── Column ─── */
+    .column {
+      background: var(--col-bg);
+      border: 1px solid var(--col-border);
+      border-radius: 14px;
+      display: flex;
+      flex-direction: column;
+      min-height: 300px;
+      transition: border-color .2s;
+    }
+    .column.drag-over {
+      border-color: var(--accent);
+      background: rgba(91,108,249,.04);
+    }
+
+    .col-header {
+      padding: 16px 16px 12px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid var(--col-border);
+    }
+    .col-title {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 13px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+    }
+    .col-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+    }
+    .col-counter {
+      background: var(--col-border);
+      border-radius: 20px;
+      padding: 2px 9px;
+      font-size: 11px;
+      font-weight: 600;
+      font-family: var(--mono);
+      color: var(--muted);
+    }
+    .col-add {
+      background: transparent;
+      border: none;
+      color: var(--muted);
+      cursor: pointer;
+      font-size: 18px;
+      line-height: 1;
+      padding: 2px 6px;
+      border-radius: 6px;
+      transition: color .2s, background .2s;
+    }
+    .col-add:hover { color: var(--text); background: var(--col-border); }
+
+    .cards-list {
+      padding: 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      flex: 1;
+      min-height: 60px;
+    }
+
+    /* ─── Card ─── */
+    .kanban-card {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 10px;
+      padding: 14px;
+      cursor: grab;
+      transition: border-color .2s, transform .15s, box-shadow .2s;
+      position: relative;
+      user-select: none;
+    }
+    .kanban-card:hover {
+      border-color: var(--accent);
+      background: var(--card-hover);
+      box-shadow: 0 4px 20px rgba(91,108,249,.12);
+    }
+    .kanban-card.dragging {
+      opacity: .4;
+      transform: rotate(1.5deg) scale(.97);
+    }
+    .kanban-card.hidden { display: none; }
+
+    .card-priority {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.6px;
+      text-transform: uppercase;
+      border-radius: 4px;
+      padding: 2px 8px;
+      margin-bottom: 8px;
+    }
+    .card-priority.high { background: rgba(249,107,138,.15); color: var(--high); }
+    .card-priority.medium { background: rgba(249,168,107,.15); color: var(--medium); }
+    .card-priority.low { background: rgba(74,222,128,.12); color: var(--low); }
+
+    .card-title {
+      font-size: 14px;
+      font-weight: 600;
+      line-height: 1.4;
+      margin-bottom: 6px;
+    }
+    .card-desc {
+      font-size: 12px;
+      color: var(--muted);
+      line-height: 1.5;
+      margin-bottom: 10px;
+    }
+    .card-tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 4px;
+      margin-bottom: 10px;
+    }
+    .tag {
+      font-size: 10px;
+      font-weight: 500;
+      padding: 2px 8px;
+      border-radius: 4px;
+      background: rgba(91,108,249,.15);
+      color: var(--accent);
+    }
+
+    .card-meta {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+    }
+    .card-assignee {
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 9px;
+      font-weight: 700;
+      color: #fff;
+      flex-shrink: 0;
+    }
+    .card-due {
+      font-size: 11px;
+      color: var(--muted);
+      font-family: var(--mono);
+    }
+    .card-due.overdue { color: var(--high); }
+
+    .card-actions {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      display: flex;
+      gap: 4px;
+      opacity: 0;
+      transition: opacity .2s;
+    }
+    .kanban-card:hover .card-actions { opacity: 1; }
+    .card-action-btn {
+      background: var(--col-bg);
+      border: 1px solid var(--col-border);
+      border-radius: 5px;
+      cursor: pointer;
+      font-size: 12px;
+      padding: 3px 6px;
+      color: var(--muted);
+      transition: color .15s, border-color .15s;
+    }
+    .card-action-btn:hover { color: var(--text); border-color: var(--accent); }
+    .card-action-btn.del:hover { color: var(--high); border-color: var(--high); }
+
+    /* ─── Stats Bar ─── */
+    .stats-bar {
+      background: var(--header-bg);
+      border-top: 1px solid var(--col-border);
+      padding: 10px 24px;
+      display: flex;
+      align-items: center;
+      gap: 20px;
+      font-size: 12px;
+      color: var(--muted);
+    }
+    .stat-item { display: flex; align-items: center; gap: 6px; }
+    .stat-dot { width: 6px; height: 6px; border-radius: 50%; }
+
+    /* ─── Modal ─── */
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,.6);
+      backdrop-filter: blur(4px);
+      z-index: 100;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity .25s;
+    }
+    .modal-overlay.open { opacity: 1; pointer-events: all; }
+
+    .modal {
+      background: var(--col-bg);
+      border: 1px solid var(--col-border);
+      border-radius: 16px;
+      width: 100%;
+      max-width: 500px;
+      padding: 32px;
+      transform: scale(.95) translateY(8px);
+      transition: transform .25s;
+    }
+    .modal-overlay.open .modal { transform: none; }
+
+    .modal-title {
+      font-size: 18px;
+      font-weight: 700;
+      margin-bottom: 24px;
+    }
+
+    .form-group { margin-bottom: 16px; }
+    .form-group label {
+      display: block;
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.7px;
+      color: var(--muted);
+      margin-bottom: 6px;
+    }
+    .form-group input,
+    .form-group textarea,
+    .form-group select {
+      width: 100%;
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 8px;
+      color: var(--text);
+      font-family: var(--font);
+      font-size: 14px;
+      padding: 10px 12px;
+      outline: none;
+      transition: border-color .2s;
+      resize: none;
+    }
+    .form-group textarea { min-height: 80px; }
+    .form-group input:focus,
+    .form-group textarea:focus,
+    .form-group select:focus { border-color: var(--accent); }
+    .form-group select { cursor: pointer; }
+
+    .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+
+    .modal-actions {
+      display: flex;
+      gap: 10px;
+      justify-content: flex-end;
+      margin-top: 24px;
+    }
+
+    /* ─── Empty ─── */
+    .col-empty {
+      text-align: center;
+      color: var(--muted2);
+      font-size: 12px;
+      padding: 20px;
+    }
+    .col-empty .em { font-size: 24px; margin-bottom: 6px; }
+
+    /* ─── Drag placeholder ─── */
+    .drag-placeholder {
+      border: 2px dashed var(--accent);
+      border-radius: 10px;
+      height: 80px;
+      background: rgba(91,108,249,.05);
+      animation: pulse 1s ease infinite alternate;
+    }
+    @keyframes pulse { from { border-color: rgba(91,108,249,.4); } to { border-color: var(--accent); } }
+  </style>
+</head>
+<body>
+
+<!-- App Header -->
+<header class="app-header">
+  <div class="app-logo">
+    <div class="dot"></div>
+    Kanban · ПР6.2 Варіант 1
+  </div>
+  <div class="header-controls">
+    <div class="search-wrap">
+      <span class="si">🔍</span>
+      <input type="text" id="searchInput" placeholder="Пошук карток..." />
+    </div>
+    <select class="filter-select" id="filterPriority">
+      <option value="">Всі пріоритети</option>
+      <option value="high">🔴 Високий</option>
+      <option value="medium">🟡 Середній</option>
+      <option value="low">🟢 Низький</option>
+    </select>
+    <select class="filter-select" id="filterAssignee">
+      <option value="">Всі виконавці</option>
+    </select>
+    <button class="btn btn-primary" id="openAddModal">+ Нова картка</button>
+  </div>
+</header>
+
+<!-- Board -->
+<main class="board" id="board">
+  <div class="column" id="col-todo" data-col="todo">
+    <div class="col-header">
+      <div class="col-title">
+        <div class="col-dot" style="background:var(--todo)"></div>
+        To Do
+      </div>
+      <div style="display:flex;align-items:center;gap:8px">
+        <span class="col-counter" id="cnt-todo">0</span>
+        <button class="col-add" data-col="todo" title="Додати картку">+</button>
+      </div>
+    </div>
+    <div class="cards-list" id="list-todo"></div>
+  </div>
+
+  <div class="column" id="col-inprogress" data-col="inprogress">
+    <div class="col-header">
+      <div class="col-title">
+        <div class="col-dot" style="background:var(--inprogress)"></div>
+        In Progress
+      </div>
+      <div style="display:flex;align-items:center;gap:8px">
+        <span class="col-counter" id="cnt-inprogress">0</span>
+        <button class="col-add" data-col="inprogress" title="Додати картку">+</button>
+      </div>
+    </div>
+    <div class="cards-list" id="list-inprogress"></div>
+  </div>
+
+  <div class="column" id="col-done" data-col="done">
+    <div class="col-header">
+      <div class="col-title">
+        <div class="col-dot" style="background:var(--done)"></div>
+        Done
+      </div>
+      <div style="display:flex;align-items:center;gap:8px">
+        <span class="col-counter" id="cnt-done">0</span>
+        <button class="col-add" data-col="done" title="Додати картку">+</button>
+      </div>
+    </div>
+    <div class="cards-list" id="list-done"></div>
+  </div>
+</main>
+
+<!-- Stats Bar -->
+<footer class="stats-bar">
+  <div class="stat-item">
+    <div class="stat-dot" style="background:var(--todo)"></div>
+    <span id="stat-todo">0 To Do</span>
+  </div>
+  <div class="stat-item">
+    <div class="stat-dot" style="background:var(--inprogress)"></div>
+    <span id="stat-inprogress">0 In Progress</span>
+  </div>
+  <div class="stat-item">
+    <div class="stat-dot" style="background:var(--done)"></div>
+    <span id="stat-done">0 Done</span>
+  </div>
+  <div style="margin-left:auto;font-family:var(--mono)">
+    Всього: <span id="stat-total">0</span>
+  </div>
+</footer>
+
+<!-- Add/Edit Modal -->
+<div class="modal-overlay" id="modalOverlay">
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+    <div class="modal-title" id="modalTitle">Нова картка</div>
+
+    <div class="form-group">
+      <label>Заголовок *</label>
+      <input type="text" id="m-title" placeholder="Заголовок завдання" maxlength="80" />
+    </div>
+
+    <div class="form-group">
+      <label>Опис</label>
+      <textarea id="m-desc" placeholder="Детальний опис завдання..."></textarea>
+    </div>
+
+    <div class="form-row">
+      <div class="form-group">
+        <label>Пріоритет</label>
+        <select id="m-priority">
+          <option value="medium">🟡 Середній</option>
+          <option value="high">🔴 Високий</option>
+          <option value="low">🟢 Низький</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Колонка</label>
+        <select id="m-col">
+          <option value="todo">To Do</option>
+          <option value="inprogress">In Progress</option>
+          <option value="done">Done</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="form-row">
+      <div class="form-group">
+        <label>Виконавець</label>
+        <input type="text" id="m-assignee" placeholder="Ім'я" />
+      </div>
+      <div class="form-group">
+        <label>Дедлайн</label>
+        <input type="date" id="m-due" />
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label>Теги (через кому)</label>
+      <input type="text" id="m-tags" placeholder="frontend, bug, urgent" />
+    </div>
+
+    <div class="modal-actions">
+      <button class="btn btn-ghost" id="modalCancel">Скасувати</button>
+      <button class="btn btn-primary" id="modalSave">Зберегти</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ═══════════════════════════════════════
+//  STATE
+// ═══════════════════════════════════════
+const COLUMNS = ['todo','inprogress','done'];
+let cards = [];
+let editingId = null;
+let dragSrcId = null;
+let placeholder = null;
+
+function loadState() {
+  try {
+    const saved = localStorage.getItem('kanban_pr6_v1');
+    if (saved) cards = JSON.parse(saved);
+  } catch {}
+  if (!cards.length) seedData();
+}
+
+function saveState() {
+  localStorage.setItem('kanban_pr6_v1', JSON.stringify(cards));
+}
+
+function seedData() {
+  const seed = [
+    { title: 'Налаштувати CI/CD pipeline', desc: 'Налаштувати GitHub Actions для автоматичного деплою', priority: 'high', assignee: 'Максим К', due: '2026-06-01', tags: ['devops','ci/cd'], col: 'todo' },
+    { title: 'Розробити API документацію', desc: 'Описати всі ендпоінти через Swagger', priority: 'medium', assignee: 'Аліна Б', due: '2026-06-10', tags: ['backend','docs'], col: 'todo' },
+    { title: 'Оновити залежності проєкту', desc: 'Оновити npm пакети до актуальних версій', priority: 'low', assignee: 'Сергій О', due: '2026-06-15', tags: ['maintenance'], col: 'todo' },
+    { title: 'Реалізувати авторизацію', desc: 'JWT + refresh tokens', priority: 'high', assignee: 'Денис Ш', due: '2026-05-28', tags: ['security','backend'], col: 'inprogress' },
+    { title: 'Дизайн головної сторінки', desc: 'Макет у Figma для Landing Page', priority: 'medium', assignee: 'Вікторія П', due: '2026-05-30', tags: ['design','ui'], col: 'inprogress' },
+    { title: 'Unit тести для API', desc: 'Покриття мінімум 80%', priority: 'medium', assignee: 'Артем К', due: '2026-06-05', tags: ['testing'], col: 'inprogress' },
+    { title: 'Налаштовано базу даних', desc: 'PostgreSQL + міграції', priority: 'high', assignee: 'Максим К', due: '2026-05-20', tags: ['database'], col: 'done' },
+    { title: 'Ініціалізовано репозиторій', desc: 'Git + .gitignore + README', priority: 'low', assignee: 'Сергій О', due: '2026-05-15', tags: ['setup'], col: 'done' },
+  ];
+  cards = seed.map((s, i) => ({ ...s, id: Date.now() + i }));
+  saveState();
+}
+
+// ═══════════════════════════════════════
+//  RENDER
+// ═══════════════════════════════════════
+function getFilters() {
+  return {
+    query: document.getElementById('searchInput').value.toLowerCase(),
+    priority: document.getElementById('filterPriority').value,
+    assignee: document.getElementById('filterAssignee').value,
+  };
+}
+
+function cardVisible(card, filters) {
+  const q = filters.query;
+  if (q && !card.title.toLowerCase().includes(q) && !card.desc.toLowerCase().includes(q) && !card.tags.join(' ').toLowerCase().includes(q)) return false;
+  if (filters.priority && card.priority !== filters.priority) return false;
+  if (filters.assignee && card.assignee !== filters.assignee) return false;
+  return true;
+}
+
+function formatDate(dateStr) {
+  if (!dateStr) return '';
+  const d = new Date(dateStr);
+  return d.toLocaleDateString('uk-UA', { day:'2-digit', month:'2-digit', year:'2-digit' });
+}
+
+function isOverdue(dateStr) {
+  if (!dateStr) return false;
+  return new Date(dateStr) < new Date() && dateStr;
+}
+
+function initials(name) {
+  if (!name) return '?';
+  return name.trim().split(' ').map(p => p[0]).join('').slice(0,2).toUpperCase();
+}
+
+function renderCard(card) {
+  const el = document.createElement('div');
+  el.className = 'kanban-card';
+  el.draggable = true;
+  el.dataset.id = card.id;
+  el.setAttribute('tabindex', '0');
+  el.setAttribute('aria-label', `Картка: ${card.title}`);
+
+  const tags = (card.tags || []).map(t => `<span class="tag">${t}</span>`).join('');
+  const due = card.due ? `<span class="card-due${isOverdue(card.due) ? ' overdue' : ''}">📅 ${formatDate(card.due)}</span>` : '';
+
+  el.innerHTML = `
+    <div class="card-actions">
+      <button class="card-action-btn edit-btn" data-id="${card.id}" title="Редагувати">✏️</button>
+      <button class="card-action-btn del del-btn" data-id="${card.id}" title="Видалити">🗑</button>
+    </div>
+    <div class="card-priority ${card.priority}">${
+      card.priority === 'high' ? '🔴 Високий' :
+      card.priority === 'medium' ? '🟡 Середній' : '🟢 Низький'
+    }</div>
+    <div class="card-title">${card.title}</div>
+    ${card.desc ? `<div class="card-desc">${card.desc}</div>` : ''}
+    ${tags ? `<div class="card-tags">${tags}</div>` : ''}
+    <div class="card-meta">
+      <div class="card-assignee" title="${card.assignee || ''}">${initials(card.assignee)}</div>
+      ${due}
+    </div>
+  `;
+
+  // Drag events
+  el.addEventListener('dragstart', onDragStart);
+  el.addEventListener('dragend', onDragEnd);
+
+  return el;
+}
+
+function render() {
+  const filters = getFilters();
+  const assignees = [...new Set(cards.map(c => c.assignee).filter(Boolean))];
+
+  // Update assignee filter
+  const aFilter = document.getElementById('filterAssignee');
+  const curAssignee = aFilter.value;
+  aFilter.innerHTML = '<option value="">Всі виконавці</option>' +
+    assignees.map(a => `<option value="${a}"${a===curAssignee?' selected':''}>${a}</option>`).join('');
+
+  COLUMNS.forEach(col => {
+    const list = document.getElementById('list-' + col);
+    const colCards = cards.filter(c => c.col === col);
+    const visible = colCards.filter(c => cardVisible(c, filters));
+
+    list.innerHTML = '';
+    if (visible.length === 0) {
+      list.innerHTML = '<div class="col-empty"><div class="em">📭</div>Немає карток</div>';
+    } else {
+      visible.forEach(c => list.appendChild(renderCard(c)));
+    }
+
+    document.getElementById('cnt-' + col).textContent = colCards.length;
+    document.getElementById('stat-' + col).textContent = `${colCards.length} ${col === 'todo' ? 'To Do' : col === 'inprogress' ? 'In Progress' : 'Done'}`;
+  });
+
+  document.getElementById('stat-total').textContent = cards.length;
+}
+
+// ═══════════════════════════════════════
+//  DRAG & DROP
+// ═══════════════════════════════════════
+function onDragStart(e) {
+  dragSrcId = parseInt(e.currentTarget.dataset.id);
+  e.currentTarget.classList.add('dragging');
+  e.dataTransfer.effectAllowed = 'move';
+  e.dataTransfer.setData('text/plain', dragSrcId);
+}
+
+function onDragEnd(e) {
+  e.currentTarget.classList.remove('dragging');
+  removePlaceholder();
+  dragSrcId = null;
+}
+
+function removePlaceholder() {
+  if (placeholder && placeholder.parentNode) placeholder.parentNode.removeChild(placeholder);
+  placeholder = null;
+}
+
+COLUMNS.forEach(col => {
+  const list = document.getElementById('list-' + col);
+  const column = document.getElementById('col-' + col);
+
+  column.addEventListener('dragover', e => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    column.classList.add('drag-over');
+
+    removePlaceholder();
+    placeholder = document.createElement('div');
+    placeholder.className = 'drag-placeholder';
+
+    // Find closest card
+    const afterEl = getDragAfterElement(list, e.clientY);
+    if (afterEl) {
+      list.insertBefore(placeholder, afterEl);
+    } else {
+      list.appendChild(placeholder);
+    }
+  });
+
+  column.addEventListener('dragleave', e => {
+    if (!column.contains(e.relatedTarget)) {
+      column.classList.remove('drag-over');
+      removePlaceholder();
+    }
+  });
+
+  column.addEventListener('drop', e => {
+    e.preventDefault();
+    column.classList.remove('drag-over');
+    removePlaceholder();
+
+    const id = parseInt(e.dataTransfer.getData('text/plain'));
+    if (!id) return;
+
+    const card = cards.find(c => c.id === id);
+    if (card) {
+      card.col = col;
+      saveState();
+      render();
+    }
+  });
+});
+
+function getDragAfterElement(container, y) {
+  const els = [...container.querySelectorAll('.kanban-card:not(.dragging)')];
+  return els.reduce((closest, child) => {
+    const box = child.getBoundingClientRect();
+    const offset = y - box.top - box.height / 2;
+    if (offset < 0 && offset > closest.offset) return { offset, element: child };
+    return closest;
+  }, { offset: Number.NEGATIVE_INFINITY }).element;
+}
+
+// ═══════════════════════════════════════
+//  MODAL
+// ═══════════════════════════════════════
+function openModal(colDefault = 'todo', cardData = null) {
+  editingId = cardData ? cardData.id : null;
+  document.getElementById('modalTitle').textContent = cardData ? 'Редагувати картку' : 'Нова картка';
+  document.getElementById('m-title').value = cardData?.title || '';
+  document.getElementById('m-desc').value = cardData?.desc || '';
+  document.getElementById('m-priority').value = cardData?.priority || 'medium';
+  document.getElementById('m-col').value = cardData?.col || colDefault;
+  document.getElementById('m-assignee').value = cardData?.assignee || '';
+  document.getElementById('m-due').value = cardData?.due || '';
+  document.getElementById('m-tags').value = (cardData?.tags || []).join(', ');
+  document.getElementById('modalOverlay').classList.add('open');
+  document.getElementById('m-title').focus();
+}
+
+function closeModal() {
+  document.getElementById('modalOverlay').classList.remove('open');
+  editingId = null;
+}
+
+document.getElementById('openAddModal').addEventListener('click', () => openModal('todo'));
+document.getElementById('modalCancel').addEventListener('click', closeModal);
+document.getElementById('modalOverlay').addEventListener('click', e => {
+  if (e.target === e.currentTarget) closeModal();
+});
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') closeModal();
+});
+
+document.getElementById('modalSave').addEventListener('click', () => {
+  const title = document.getElementById('m-title').value.trim();
+  if (!title) { document.getElementById('m-title').focus(); return; }
+
+  const data = {
+    title,
+    desc: document.getElementById('m-desc').value.trim(),
+    priority: document.getElementById('m-priority').value,
+    col: document.getElementById('m-col').value,
+    assignee: document.getElementById('m-assignee').value.trim(),
+    due: document.getElementById('m-due').value,
+    tags: document.getElementById('m-tags').value.split(',').map(t => t.trim()).filter(Boolean),
+  };
+
+  if (editingId) {
+    const idx = cards.findIndex(c => c.id === editingId);
+    if (idx !== -1) cards[idx] = { ...cards[idx], ...data };
+  } else {
+    cards.push({ ...data, id: Date.now() });
+  }
+
+  saveState();
+  closeModal();
+  render();
+});
+
+// Column add buttons
+document.querySelectorAll('.col-add').forEach(btn => {
+  btn.addEventListener('click', () => openModal(btn.dataset.col));
+});
+
+// Card edit/delete via event delegation
+document.getElementById('board').addEventListener('click', e => {
+  const editBtn = e.target.closest('.edit-btn');
+  const delBtn = e.target.closest('.del-btn');
+  if (editBtn) {
+    const id = parseInt(editBtn.dataset.id);
+    const card = cards.find(c => c.id === id);
+    if (card) openModal(card.col, card);
+  }
+  if (delBtn) {
+    const id = parseInt(delBtn.dataset.id);
+    cards = cards.filter(c => c.id !== id);
+    saveState();
+    render();
+  }
+});
+
+// Search & filter
+const debounce = (fn, ms) => { let t; return (...a) => { clearTimeout(t); t = setTimeout(() => fn(...a), ms); }; };
+document.getElementById('searchInput').addEventListener('input', debounce(render, 250));
+document.getElementById('filterPriority').addEventListener('change', render);
+document.getElementById('filterAssignee').addEventListener('change', render);
+
+// ═══════════════════════════════════════
+//  INIT
+// ═══════════════════════════════════════
+loadState();
+render();
+</script>
+</body>
+</html>

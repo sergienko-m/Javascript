@@ -1,0 +1,494 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ПР6 Частина 1 · Варіант 1 — Advanced Contact Form</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=Source+Sans+3:ital,wght@0,300;0,400;0,600;1,300&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #faf9f7;
+      --card: #ffffff;
+      --border: #e8e4de;
+      --text: #1a1814;
+      --muted: #8a857d;
+      --accent: #c9602a;
+      --accent-light: #f5ede7;
+      --success: #2d7a5e;
+      --success-light: #eaf4ef;
+      --error: #c13737;
+      --error-light: #fceaea;
+      --warning: #b07d1b;
+      --font-display: 'Playfair Display', serif;
+      --font-body: 'Source Sans 3', sans-serif;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--font-body);
+      font-size: 15px;
+      min-height: 100vh;
+      display: flex;
+      align-items: flex-start;
+      justify-content: center;
+      padding: 60px 20px;
+    }
+
+    .wrapper {
+      width: 100%;
+      max-width: 680px;
+    }
+
+    /* ─── Header ─── */
+    .header {
+      text-align: center;
+      margin-bottom: 48px;
+    }
+    .header .eyebrow {
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 2.5px;
+      text-transform: uppercase;
+      color: var(--accent);
+      margin-bottom: 12px;
+    }
+    .header h1 {
+      font-family: var(--font-display);
+      font-size: 42px;
+      font-weight: 900;
+      line-height: 1.1;
+      color: var(--text);
+    }
+    .header p {
+      margin-top: 12px;
+      color: var(--muted);
+      font-size: 15px;
+      font-weight: 300;
+    }
+    .divider {
+      width: 48px;
+      height: 3px;
+      background: var(--accent);
+      margin: 16px auto 0;
+      border-radius: 2px;
+    }
+
+    /* ─── Card ─── */
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 44px 48px;
+      box-shadow: 0 4px 40px rgba(0,0,0,.06), 0 1px 4px rgba(0,0,0,.04);
+    }
+    @media (max-width: 600px) {
+      .card { padding: 28px 24px; }
+      .header h1 { font-size: 30px; }
+    }
+
+    /* ─── Progress ─── */
+    .progress-section {
+      margin-bottom: 36px;
+    }
+    .progress-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 10px;
+    }
+    .progress-head span:first-child {
+      font-size: 12px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: var(--muted);
+    }
+    .progress-pct {
+      font-family: var(--font-display);
+      font-size: 22px;
+      font-weight: 700;
+      color: var(--accent);
+    }
+    .progress-track {
+      height: 8px;
+      background: var(--border);
+      border-radius: 4px;
+      overflow: hidden;
+    }
+    .progress-fill {
+      height: 100%;
+      background: var(--accent);
+      border-radius: 4px;
+      transition: width 0.5s cubic-bezier(.4,0,.2,1);
+      width: 0%;
+    }
+    .progress-steps {
+      display: flex;
+      justify-content: space-between;
+      margin-top: 8px;
+    }
+    .progress-steps span {
+      font-size: 10px;
+      color: var(--border);
+      letter-spacing: 0.5px;
+    }
+    .progress-steps span.done { color: var(--accent); }
+
+    /* ─── Fields ─── */
+    .field {
+      margin-bottom: 24px;
+    }
+    .field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+    @media (max-width: 540px) { .field-row { grid-template-columns: 1fr; } }
+
+    .floating-label {
+      position: relative;
+    }
+    .floating-label input,
+    .floating-label select,
+    .floating-label textarea {
+      width: 100%;
+      background: transparent;
+      border: 1.5px solid var(--border);
+      border-radius: 10px;
+      color: var(--text);
+      font-family: var(--font-body);
+      font-size: 15px;
+      padding: 20px 44px 8px 16px;
+      outline: none;
+      transition: border-color .25s, box-shadow .25s;
+      appearance: none;
+      resize: none;
+    }
+    .floating-label select { cursor: pointer; background: var(--card); }
+    .floating-label textarea { min-height: 100px; padding-right: 16px; }
+
+    .floating-label label {
+      position: absolute;
+      left: 16px;
+      top: 14px;
+      color: var(--muted);
+      font-size: 15px;
+      font-weight: 300;
+      pointer-events: none;
+      transition: top .2s, font-size .2s, color .2s, font-weight .2s;
+      background: transparent;
+    }
+    .floating-label input:focus ~ label,
+    .floating-label input:not(:placeholder-shown) ~ label,
+    .floating-label select:focus ~ label,
+    .floating-label select:not([value=""]):valid ~ label,
+    .floating-label textarea:focus ~ label,
+    .floating-label textarea:not(:placeholder-shown) ~ label {
+      top: 6px;
+      font-size: 10px;
+      font-weight: 600;
+      letter-spacing: 0.8px;
+      text-transform: uppercase;
+      color: var(--accent);
+    }
+
+    .floating-label input:focus,
+    .floating-label select:focus,
+    .floating-label textarea:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(201,96,42,.1);
+    }
+
+    .field.valid .floating-label input,
+    .field.valid .floating-label select,
+    .field.valid .floating-label textarea {
+      border-color: var(--success);
+      box-shadow: 0 0 0 3px rgba(45,122,94,.08);
+    }
+    .field.valid .floating-label label { color: var(--success); }
+
+    .field.invalid .floating-label input,
+    .field.invalid .floating-label select,
+    .field.invalid .floating-label textarea {
+      border-color: var(--error);
+      box-shadow: 0 0 0 3px rgba(193,55,55,.08);
+    }
+    .field.invalid .floating-label label { color: var(--error); }
+
+    .field-icon {
+      position: absolute;
+      right: 14px;
+      top: 50%;
+      transform: translateY(-50%);
+      font-size: 14px;
+      pointer-events: none;
+    }
+    .field-bottom {
+      display: flex;
+      justify-content: space-between;
+      margin-top: 5px;
+    }
+    .field-error {
+      font-size: 12px;
+      color: var(--error);
+      min-height: 18px;
+    }
+    .char-counter {
+      font-size: 12px;
+      color: var(--muted);
+    }
+    .char-counter.warn { color: var(--warning); }
+    .char-counter.over { color: var(--error); }
+
+    /* ─── Submit ─── */
+    .btn-submit {
+      width: 100%;
+      padding: 16px;
+      border-radius: 10px;
+      border: none;
+      background: var(--accent);
+      color: #fff;
+      font-family: var(--font-display);
+      font-size: 16px;
+      font-weight: 700;
+      letter-spacing: 0.3px;
+      cursor: pointer;
+      transition: background .25s, transform .15s, opacity .25s;
+      position: relative;
+      overflow: hidden;
+      margin-top: 8px;
+    }
+    .btn-submit::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: rgba(255,255,255,0);
+      transition: background .2s;
+    }
+    .btn-submit:not(:disabled):hover { background: #b55425; }
+    .btn-submit:not(:disabled):hover::after { background: rgba(255,255,255,.05); }
+    .btn-submit:not(:disabled):active { transform: scale(.99); }
+    .btn-submit:disabled { opacity: .38; cursor: not-allowed; }
+
+    .btn-loading::after {
+      content: '';
+      display: inline-block;
+      width: 14px;
+      height: 14px;
+      border: 2px solid rgba(255,255,255,.5);
+      border-top-color: #fff;
+      border-radius: 50%;
+      animation: spin .7s linear infinite;
+      margin-left: 10px;
+      vertical-align: middle;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ─── Success ─── */
+    .success-banner {
+      display: none;
+      background: var(--success-light);
+      border: 1.5px solid var(--success);
+      border-radius: 12px;
+      padding: 20px 24px;
+      text-align: center;
+      color: var(--success);
+      margin-top: 20px;
+      animation: slideUp .4s ease;
+    }
+    .success-banner.show { display: block; }
+    .success-banner strong { font-family: var(--font-display); font-size: 18px; display: block; margin-bottom: 4px; }
+    @keyframes slideUp { from { opacity:0; transform:translateY(10px); } to { opacity:1; transform:none; } }
+  </style>
+</head>
+<body>
+
+<div class="wrapper">
+  <div class="header">
+    <div class="eyebrow">Практична Робота 6 · Частина 1 · Варіант 1</div>
+    <h1>Зв'яжіться з нами</h1>
+    <p>Заповніть форму і ми відповімо протягом доби</p>
+    <div class="divider"></div>
+  </div>
+
+  <div class="card">
+    <!-- Progress -->
+    <div class="progress-section">
+      <div class="progress-head">
+        <span>Заповнення</span>
+        <span class="progress-pct" id="pct">0%</span>
+      </div>
+      <div class="progress-track">
+        <div class="progress-fill" id="pFill"></div>
+      </div>
+      <div class="progress-steps">
+        <span id="ps0">Ім'я</span>
+        <span id="ps1">Email</span>
+        <span id="ps2">Телефон</span>
+        <span id="ps3">Тема</span>
+        <span id="ps4">Повідомлення</span>
+      </div>
+    </div>
+
+    <form id="form" novalidate>
+
+      <div class="field-row">
+        <div class="field" id="f-name">
+          <div class="floating-label">
+            <input type="text" id="i-name" placeholder=" " autocomplete="name" />
+            <label>Ім'я та прізвище</label>
+            <span class="field-icon" id="ic-name"></span>
+          </div>
+          <div class="field-bottom">
+            <div class="field-error" id="e-name"></div>
+          </div>
+        </div>
+
+        <div class="field" id="f-email">
+          <div class="floating-label">
+            <input type="email" id="i-email" placeholder=" " autocomplete="email" />
+            <label>Email адреса</label>
+            <span class="field-icon" id="ic-email"></span>
+          </div>
+          <div class="field-bottom">
+            <div class="field-error" id="e-email"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="field-row">
+        <div class="field" id="f-phone">
+          <div class="floating-label">
+            <input type="tel" id="i-phone" placeholder=" " autocomplete="tel" />
+            <label>Телефон (+380...)</label>
+            <span class="field-icon" id="ic-phone"></span>
+          </div>
+          <div class="field-bottom">
+            <div class="field-error" id="e-phone"></div>
+          </div>
+        </div>
+
+        <div class="field" id="f-topic">
+          <div class="floating-label">
+            <select id="i-topic" required>
+              <option value="">— оберіть тему —</option>
+              <option value="support">Технічна підтримка</option>
+              <option value="question">Загальне питання</option>
+              <option value="partnership">Партнерство</option>
+              <option value="complaint">Скарга</option>
+              <option value="other">Інше</option>
+            </select>
+            <label>Тема звернення</label>
+            <span class="field-icon" id="ic-topic"></span>
+          </div>
+          <div class="field-bottom">
+            <div class="field-error" id="e-topic"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="field" id="f-msg">
+        <div class="floating-label">
+          <textarea id="i-msg" placeholder=" "></textarea>
+          <label>Повідомлення</label>
+        </div>
+        <div class="field-bottom">
+          <div class="field-error" id="e-msg"></div>
+          <div class="char-counter" id="cc">0 / 500</div>
+        </div>
+      </div>
+
+      <button type="submit" class="btn-submit" id="subBtn" disabled>
+        Надіслати повідомлення
+      </button>
+    </form>
+
+    <div class="success-banner" id="successBanner">
+      <strong>Повідомлення надіслано!</strong>
+      Дякуємо, ми зв'яжемось з вами найближчим часом.
+    </div>
+  </div>
+</div>
+
+<script>
+const debounce = (fn, ms) => { let t; return (...a) => { clearTimeout(t); t = setTimeout(() => fn(...a), ms); }; };
+
+const rules = {
+  name:  v => !v ? "Введіть ім'я" : !/^[a-zA-Zа-яА-ЯіІїЇєЄґҐ'\s\-]{2,}$/u.test(v) ? 'Тільки літери, мінімум 2 символи' : '',
+  email: v => !v ? 'Введіть email' : !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v) ? 'Невірний email' : '',
+  phone: v => !v ? 'Введіть телефон' : !/^\+380\d{9}$/.test(v.replace(/\s|-/g,'')) ? '+380XXXXXXXXX' : '',
+  topic: v => !v ? 'Оберіть тему' : '',
+  msg:   v => !v ? 'Введіть повідомлення' : v.length < 20 ? `Мінімум 20 символів (${v.length})` : v.length > 500 ? `Максимум 500 символів (${v.length})` : '',
+};
+
+const valid = { name:false, email:false, phone:false, topic:false, msg:false };
+const stepLabels = ['name','email','phone','topic','msg'];
+
+function applyField(key, err) {
+  const f = document.getElementById('f-' + key);
+  const e = document.getElementById('e-' + key);
+  const ic = document.getElementById('ic-' + key);
+  f.classList.toggle('valid', !err);
+  f.classList.toggle('invalid', !!err);
+  if (e) e.textContent = err;
+  if (ic) ic.textContent = err ? '✗' : '✓';
+  valid[key] = !err;
+  updateProgress();
+}
+
+function updateProgress() {
+  const count = Object.values(valid).filter(Boolean).length;
+  const pct = Math.round(count / 5 * 100);
+  document.getElementById('pFill').style.width = pct + '%';
+  document.getElementById('pct').textContent = pct + '%';
+  document.getElementById('subBtn').disabled = pct < 100;
+  stepLabels.forEach((k, i) => {
+    document.getElementById('ps' + i).className = valid[k] ? 'done' : '';
+  });
+}
+
+['name','email','phone'].forEach(k => {
+  const el = document.getElementById('i-' + k);
+  el.addEventListener('input', debounce(() => applyField(k, rules[k](el.value.trim())), 300));
+});
+
+const topicEl = document.getElementById('i-topic');
+topicEl.addEventListener('change', () => applyField('topic', rules.topic(topicEl.value)));
+
+const msgEl = document.getElementById('i-msg');
+const cc = document.getElementById('cc');
+msgEl.addEventListener('input', debounce(() => {
+  const len = msgEl.value.length;
+  cc.textContent = len + ' / 500';
+  cc.className = 'char-counter' + (len > 500 ? ' over' : len > 400 ? ' warn' : '');
+  applyField('msg', rules.msg(msgEl.value.trim()));
+}, 300));
+
+document.getElementById('form').addEventListener('submit', e => {
+  e.preventDefault();
+  const btn = document.getElementById('subBtn');
+  btn.textContent = 'Надсилання';
+  btn.classList.add('btn-loading');
+  btn.disabled = true;
+  setTimeout(() => {
+    btn.classList.remove('btn-loading');
+    btn.textContent = 'Надіслати повідомлення';
+    document.getElementById('successBanner').classList.add('show');
+    e.target.reset();
+    Object.keys(valid).forEach(k => {
+      valid[k] = false;
+      document.getElementById('f-' + k).classList.remove('valid','invalid');
+      const ic = document.getElementById('ic-' + k);
+      if (ic) ic.textContent = '';
+      const er = document.getElementById('e-' + k);
+      if (er) er.textContent = '';
+    });
+    cc.textContent = '0 / 500';
+    cc.className = 'char-counter';
+    updateProgress();
+    setTimeout(() => document.getElementById('successBanner').classList.remove('show'), 5000);
+  }, 1200);
+});
+</script>
+</body>
+</html>
