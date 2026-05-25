@@ -1,0 +1,1025 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Практична 8 — Функції вищого порядку</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: monospace; background: #0d1117; color: #c9d1d9; font-size: 14px; }
+header { background: #161b22; border-bottom: 1px solid #30363d; padding: 16px 28px; display: flex; align-items: center; justify-content: space-between; }
+header h1 { color: #58a6ff; font-size: 18px; }
+header p  { color: #8b949e; font-size: 12px; margin-top: 2px; }
+.tag { background: #388bfd1a; color: #58a6ff; border: 1px solid #388bfd66; padding: 3px 10px; border-radius: 20px; font-size: 11px; }
+.layout { display: grid; grid-template-columns: 230px 1fr; min-height: calc(100vh - 57px); }
+aside { background: #161b22; border-right: 1px solid #30363d; padding: 16px 12px; }
+aside h2 { font-size: 10px; color: #8b949e; letter-spacing: 2px; text-transform: uppercase; margin-bottom: 10px; padding-left: 8px; }
+.nb { display: block; width: 100%; background: none; border: 1px solid transparent; color: #8b949e; padding: 8px 12px; border-radius: 6px; cursor: pointer; text-align: left; font-family: monospace; font-size: 12px; margin-bottom: 3px; }
+.nb:hover { color: #c9d1d9; background: #21262d; border-color: #30363d; }
+.nb.active { color: #58a6ff; background: #388bfd1a; border-color: #388bfd66; }
+main { padding: 24px; overflow-y: auto; }
+.page { display: none; }
+.page.active { display: block; }
+.page-title { font-size: 20px; color: #e6edf3; margin-bottom: 4px; }
+.page-sub { color: #8b949e; font-size: 12px; margin-bottom: 24px; }
+.card { background: #161b22; border: 1px solid #30363d; border-radius: 8px; padding: 20px; margin-bottom: 16px; }
+.card h3 { font-size: 13px; color: #8b949e; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 14px; }
+.grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.grid3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 14px; }
+pre { background: #0d1117; border: 1px solid #30363d; border-radius: 6px; padding: 14px; font-size: 12px; overflow-x: auto; white-space: pre-wrap; line-height: 1.6; }
+.kw  { color: #ff7b72; }   /* keywords */
+.fn  { color: #d2a8ff; }   /* functions */
+.str { color: #a5d6ff; }   /* strings */
+.num { color: #79c0ff; }   /* numbers */
+.cmt { color: #8b949e; }   /* comments */
+.out { color: #3fb950; }   /* output */
+.arrow { color: #ffa657; } /* arrows */
+.result-box { background: #0d1117; border: 1px solid #3fb95066; border-radius: 6px; padding: 12px; margin-top: 10px; }
+.result-box h4 { font-size: 11px; color: #3fb950; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px; }
+.result-row { display: flex; justify-content: space-between; align-items: center; padding: 5px 0; border-bottom: 1px solid #21262d; font-size: 13px; }
+.result-row:last-child { border-bottom: none; }
+.result-key { color: #8b949e; }
+.result-val { color: #3fb950; font-weight: 700; }
+.badge { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 700; margin: 2px; }
+.b-map    { background: #388bfd1a; color: #58a6ff; border: 1px solid #388bfd66; }
+.b-filter { background: #3fb9501a; color: #3fb950; border: 1px solid #3fb95066; }
+.b-reduce { background: #d2a8ff1a; color: #d2a8ff; border: 1px solid #d2a8ff66; }
+.b-compose{ background: #ffa6571a; color: #ffa657; border: 1px solid #ffa65766; }
+.b-curry  { background: #ff7b721a; color: #ff7b72; border: 1px solid #ff7b7266; }
+.b-pure   { background: #a5d6ff1a; color: #a5d6ff; border: 1px solid #a5d6ff66; }
+.controls { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 14px; align-items: center; }
+input, select { background: #21262d; border: 1px solid #30363d; color: #c9d1d9; padding: 8px 12px; border-radius: 6px; font-family: monospace; font-size: 13px; outline: none; }
+input:focus, select:focus { border-color: #58a6ff; }
+.btn { padding: 8px 16px; border-radius: 6px; border: none; cursor: pointer; font-family: monospace; font-size: 13px; }
+.btn-blue  { background: #238636; color: #fff; }
+.btn-blue:hover { background: #2ea043; }
+.btn-ghost { background: none; border: 1px solid #30363d; color: #8b949e; }
+.btn-ghost:hover { border-color: #58a6ff; color: #58a6ff; }
+.step-flow { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+.step-box { background: #21262d; border: 1px solid #30363d; border-radius: 6px; padding: 8px 14px; font-size: 12px; }
+.step-arrow { color: #ffa657; font-size: 16px; }
+.interactive-out { background: #0d1117; border: 1px solid #30363d; border-radius: 6px; padding: 14px; min-height: 80px; font-size: 13px; margin-top: 10px; }
+.tag-row { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 12px; }
+table { width: 100%; border-collapse: collapse; }
+th { padding: 9px 12px; text-align: left; font-size: 11px; color: #8b949e; text-transform: uppercase; letter-spacing: 1px; border-bottom: 1px solid #30363d; }
+td { padding: 9px 12px; border-bottom: 1px solid #21262d; font-size: 13px; }
+tr:last-child td { border-bottom: none; }
+tr:hover td { background: #388bfd0a; }
+.immut-demo { display: grid; grid-template-columns: 1fr auto 1fr; gap: 12px; align-items: center; margin-top: 12px; }
+.immut-box { background: #0d1117; border: 1px solid #30363d; border-radius: 6px; padding: 12px; font-size: 12px; }
+.immut-box h4 { font-size: 11px; color: #8b949e; margin-bottom: 8px; }
+.immut-arrow { color: #ffa657; font-size: 24px; text-align: center; }
+</style>
+</head>
+<body>
+
+<header>
+  <div>
+    <h1>// higher_order_functions.js</h1>
+    <p>Практична робота 8 · Варіант 1 · Data Transformation Library</p>
+  </div>
+  <span class="tag">10 балів</span>
+</header>
+
+<div class="layout">
+  <aside>
+    <h2>Розділи</h2>
+    <button class="nb active" onclick="goPage('overview',this)">📖 Огляд</button>
+    <button class="nb" onclick="goPage('map-filter-reduce',this)">🔁 map / filter / reduce</button>
+    <button class="nb" onclick="goPage('find-some-every',this)">🔍 find / some / every</button>
+    <button class="nb" onclick="goPage('compose',this)">🔗 compose / pipe</button>
+    <button class="nb" onclick="goPage('curry',this)">🍛 curry / partial</button>
+    <button class="nb" onclick="goPage('memoize',this)">⚡ memoize</button>
+    <button class="nb" onclick="goPage('pure',this)">✨ Чисті функції</button>
+    <button class="nb" onclick="goPage('chain',this)">⛓ Chainable API</button>
+    <button class="nb" onclick="goPage('playground',this)">🎮 Playground</button>
+  </aside>
+
+  <main>
+
+    <!-- ОГЛЯД -->
+    <div id="page-overview" class="page active">
+      <div class="page-title">Data Transformation Library</div>
+      <div class="page-sub">// Функції вищого порядку · Композиція · Каррінг · Мемоізація</div>
+      <div class="grid3">
+        <div class="card"><h3>🔁 HOF</h3><p style="color:#8b949e;font-size:12px;margin-bottom:10px">Власні реалізації вбудованих методів</p>
+          <div class="tag-row">
+            <span class="badge b-map">myMap</span><span class="badge b-filter">myFilter</span>
+            <span class="badge b-reduce">myReduce</span><span class="badge b-map">myFind</span>
+            <span class="badge b-filter">mySome</span><span class="badge b-reduce">myEvery</span>
+          </div>
+        </div>
+        <div class="card"><h3>🔗 Composition</h3><p style="color:#8b949e;font-size:12px;margin-bottom:10px">Composing functions together</p>
+          <div class="tag-row">
+            <span class="badge b-compose">compose</span><span class="badge b-compose">pipe</span>
+          </div>
+        </div>
+        <div class="card"><h3>🍛 Currying</h3><p style="color:#8b949e;font-size:12px;margin-bottom:10px">Часткове застосування функцій</p>
+          <div class="tag-row">
+            <span class="badge b-curry">curry</span><span class="badge b-curry">partial</span>
+          </div>
+        </div>
+        <div class="card"><h3>⚡ Memoize</h3><p style="color:#8b949e;font-size:12px;margin-bottom:10px">Кешування результатів</p>
+          <div class="tag-row"><span class="badge b-reduce">memoize</span></div>
+        </div>
+        <div class="card"><h3>✨ Pure</h3><p style="color:#8b949e;font-size:12px;margin-bottom:10px">Чисті функції та імутабельність</p>
+          <div class="tag-row"><span class="badge b-pure">no side effects</span><span class="badge b-pure">immutable</span></div>
+        </div>
+        <div class="card"><h3>⛓ Chain API</h3><p style="color:#8b949e;font-size:12px;margin-bottom:10px">Ланцюжок трансформацій</p>
+          <div class="tag-row"><span class="badge b-compose">fluent</span><span class="badge b-compose">chainable</span></div>
+        </div>
+      </div>
+      <div class="card">
+        <h3>Принципи функціонального програмування</h3>
+        <table>
+          <thead><tr><th>Принцип</th><th>Опис</th><th>Реалізація</th></tr></thead>
+          <tbody>
+            <tr><td style="color:#58a6ff">Чисті функції</td><td style="color:#8b949e">Без побічних ефектів, завжди той самий результат</td><td><span class="badge b-pure">myMap, myFilter, compose...</span></td></tr>
+            <tr><td style="color:#3fb950">Імутабельність</td><td style="color:#8b949e">Не змінюємо оригінальні дані</td><td><span class="badge b-filter">[...arr] замість arr.sort()</span></td></tr>
+            <tr><td style="color:#d2a8ff">Функції як значення</td><td style="color:#8b949e">Функції передаються як аргументи</td><td><span class="badge b-reduce">HOF, callbacks</span></td></tr>
+            <tr><td style="color:#ffa657">Композиція</td><td style="color:#8b949e">Складні функції з простих</td><td><span class="badge b-compose">compose, pipe</span></td></tr>
+            <tr><td style="color:#ff7b72">Каррінг</td><td style="color:#8b949e">Часткове застосування аргументів</td><td><span class="badge b-curry">curry, partial</span></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- MAP FILTER REDUCE -->
+    <div id="page-map-filter-reduce" class="page">
+      <div class="page-title">map / filter / reduce</div>
+      <div class="page-sub">// Власні реалізації · Curried форма · Чисті функції</div>
+
+      <div class="card">
+        <h3><span class="badge b-map">myMap</span> — трансформація елементів</h3>
+        <pre><span class="kw">const</span> <span class="fn">myMap</span> = <span class="fn">(fn)</span> <span class="arrow">=></span> <span class="fn">(arr)</span> <span class="arrow">=></span> {
+  <span class="kw">const</span> result = [];
+  <span class="kw">for</span> (<span class="kw">let</span> i = <span class="num">0</span>; i &lt; arr.length; i++) {
+    result.<span class="fn">push</span>(<span class="fn">fn</span>(arr[i], i, arr));
+  }
+  <span class="kw">return</span> result;  <span class="cmt">// новий масив, оригінал не змінено</span>
+};</pre>
+        <div id="map-result" class="result-box"></div>
+      </div>
+
+      <div class="card">
+        <h3><span class="badge b-filter">myFilter</span> — фільтрація елементів</h3>
+        <pre><span class="kw">const</span> <span class="fn">myFilter</span> = <span class="fn">(fn)</span> <span class="arrow">=></span> <span class="fn">(arr)</span> <span class="arrow">=></span> {
+  <span class="kw">const</span> result = [];
+  <span class="kw">for</span> (<span class="kw">let</span> i = <span class="num">0</span>; i &lt; arr.length; i++) {
+    <span class="kw">if</span> (<span class="fn">fn</span>(arr[i])) result.<span class="fn">push</span>(arr[i]);
+  }
+  <span class="kw">return</span> result;
+};</pre>
+        <div id="filter-result" class="result-box"></div>
+      </div>
+
+      <div class="card">
+        <h3><span class="badge b-reduce">myReduce</span> — згортання до значення</h3>
+        <pre><span class="kw">const</span> <span class="fn">myReduce</span> = <span class="fn">(fn, initial)</span> <span class="arrow">=></span> <span class="fn">(arr)</span> <span class="arrow">=></span> {
+  <span class="kw">let</span> acc = initial;
+  <span class="kw">for</span> (<span class="kw">let</span> i = <span class="num">0</span>; i &lt; arr.length; i++) {
+    acc = <span class="fn">fn</span>(acc, arr[i], i, arr);
+  }
+  <span class="kw">return</span> acc;
+};</pre>
+        <div id="reduce-result" class="result-box"></div>
+      </div>
+
+      <div class="card">
+        <h3>🎮 Інтерактивний приклад</h3>
+        <div class="controls">
+          <input id="arr-input" value="1,2,3,4,5,6,7,8,9,10" style="width:220px" placeholder="числа через кому">
+          <select id="op-select">
+            <option value="double">map: подвоїти</option>
+            <option value="square">map: квадрат</option>
+            <option value="even">filter: парні</option>
+            <option value="odd">filter: непарні</option>
+            <option value="gt5">filter: > 5</option>
+            <option value="sum">reduce: сума</option>
+            <option value="max">reduce: максимум</option>
+          </select>
+          <button class="btn btn-blue" onclick="runInteractive()">▶ Виконати</button>
+        </div>
+        <div id="interactive-out" class="interactive-out" style="color:#8b949e">← Виберіть операцію та натисніть ▶</div>
+      </div>
+    </div>
+
+    <!-- FIND SOME EVERY -->
+    <div id="page-find-some-every" class="page">
+      <div class="page-title">find / some / every</div>
+      <div class="page-sub">// forEach · find · some · every — власні реалізації</div>
+
+      <div class="grid2">
+        <div class="card">
+          <h3><span class="badge b-map">myFind</span> — перший елемент</h3>
+          <pre><span class="kw">const</span> <span class="fn">myFind</span> = <span class="fn">(fn)</span> <span class="arrow">=></span> <span class="fn">(arr)</span> <span class="arrow">=></span> {
+  <span class="kw">for</span> (<span class="kw">let</span> i = <span class="num">0</span>; i &lt; arr.length; i++) {
+    <span class="kw">if</span> (<span class="fn">fn</span>(arr[i])) <span class="kw">return</span> arr[i];
+  }
+  <span class="kw">return</span> <span class="kw">undefined</span>;
+};</pre>
+        </div>
+        <div class="card">
+          <h3><span class="badge b-filter">mySome / myEvery</span></h3>
+          <pre><span class="cmt">// some — хоча б один</span>
+<span class="kw">const</span> <span class="fn">mySome</span> = <span class="fn">(fn)</span> <span class="arrow">=></span> <span class="fn">(arr)</span> <span class="arrow">=></span> {
+  <span class="kw">for</span> (<span class="kw">let</span> i = <span class="num">0</span>; i &lt; arr.length; i++)
+    <span class="kw">if</span> (<span class="fn">fn</span>(arr[i])) <span class="kw">return true</span>;
+  <span class="kw">return false</span>;
+};
+<span class="cmt">// every — всі</span>
+<span class="kw">const</span> <span class="fn">myEvery</span> = <span class="fn">(fn)</span> <span class="arrow">=></span> <span class="fn">(arr)</span> <span class="arrow">=></span> {
+  <span class="kw">for</span> (<span class="kw">let</span> i = <span class="num">0</span>; i &lt; arr.length; i++)
+    <span class="kw">if</span> (!<span class="fn">fn</span>(arr[i])) <span class="kw">return false</span>;
+  <span class="kw">return true</span>;
+};</pre>
+        </div>
+      </div>
+      <div class="card">
+        <h3>Демонстрація на масиві користувачів</h3>
+        <div id="find-result" class="result-box"></div>
+      </div>
+    </div>
+
+    <!-- COMPOSE PIPE -->
+    <div id="page-compose" class="page">
+      <div class="page-title">compose / pipe</div>
+      <div class="page-sub">// Композиція функцій — будуємо складні трансформації з простих</div>
+
+      <div class="grid2">
+        <div class="card">
+          <h3><span class="badge b-compose">compose</span> — справа наліво</h3>
+          <pre><span class="kw">const</span> <span class="fn">compose</span> = <span class="fn">(...fns)</span> <span class="arrow">=></span> <span class="fn">(x)</span> <span class="arrow">=></span>
+  fns.<span class="fn">reduceRight</span>(<span class="fn">(acc, fn)</span> <span class="arrow">=></span> <span class="fn">fn</span>(acc), x);
+
+<span class="cmt">// compose(f, g, h)(x) === f(g(h(x)))</span>
+<span class="kw">const</span> process = <span class="fn">compose</span>(
+  <span class="fn">myMap</span>(double),       <span class="cmt">// 3️⃣ подвоїти</span>
+  <span class="fn">myFilter</span>(isEven),   <span class="cmt">// 2️⃣ лише парні</span>
+  <span class="fn">myMap</span>(increment)    <span class="cmt">// 1️⃣ +1 до кожного</span>
+);
+<span class="fn">process</span>([<span class="num">1</span>,<span class="num">2</span>,<span class="num">3</span>,<span class="num">4</span>,<span class="num">5</span>]);
+<span class="cmt">// → [2,3,4,5,6] → [2,4,6] → [4,8,12]</span></pre>
+          <div class="step-flow" id="compose-steps"></div>
+        </div>
+        <div class="card">
+          <h3><span class="badge b-compose">pipe</span> — зліва направо</h3>
+          <pre><span class="kw">const</span> <span class="fn">pipe</span> = <span class="fn">(...fns)</span> <span class="arrow">=></span> <span class="fn">(x)</span> <span class="arrow">=></span>
+  fns.<span class="fn">reduce</span>(<span class="fn">(acc, fn)</span> <span class="arrow">=></span> <span class="fn">fn</span>(acc), x);
+
+<span class="cmt">// pipe(f, g, h)(x) === h(g(f(x)))</span>
+<span class="kw">const</span> processName = <span class="fn">pipe</span>(
+  trim,    <span class="cmt">// 1️⃣ прибрати пробіли</span>
+  toUpper  <span class="cmt">// 2️⃣ верхній регістр</span>
+);
+<span class="fn">processName</span>(<span class="str">'  іван  '</span>);
+<span class="cmt">// → 'іван' → 'ІВАН'</span></pre>
+          <div id="pipe-result" class="result-box" style="margin-top:10px"></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>🎮 Побудуй власний pipeline</h3>
+        <div class="controls">
+          <input id="pipe-input" value="  привіт світ  " style="width:200px">
+          <select id="pipe-op1"><option value="trim">trim</option><option value="upper">toUpper</option><option value="lower">toLower</option><option value="rev">reverse</option></select>
+          <span style="color:#ffa657">→</span>
+          <select id="pipe-op2"><option value="upper">toUpper</option><option value="trim">trim</option><option value="lower">toLower</option><option value="rev">reverse</option></select>
+          <button class="btn btn-blue" onclick="runPipe()">▶ Виконати</button>
+        </div>
+        <div id="pipe-out" class="interactive-out" style="color:#8b949e">← Введіть рядок і виберіть операції</div>
+      </div>
+    </div>
+
+    <!-- CURRY PARTIAL -->
+    <div id="page-curry" class="page">
+      <div class="page-title">curry / partial</div>
+      <div class="page-sub">// Каррінг — часткове застосування аргументів</div>
+
+      <div class="grid2">
+        <div class="card">
+          <h3><span class="badge b-curry">curry</span></h3>
+          <pre><span class="kw">const</span> <span class="fn">curry</span> = <span class="fn">(fn)</span> <span class="arrow">=></span> {
+  <span class="kw">const</span> arity = fn.length;
+  <span class="kw">return function</span> <span class="fn">curried</span>(<span class="fn">...args</span>) {
+    <span class="kw">if</span> (args.length >= arity)
+      <span class="kw">return</span> <span class="fn">fn</span>(...args);
+    <span class="kw">return</span> <span class="fn">(...more)</span> <span class="arrow">=></span> <span class="fn">curried</span>(...args, ...more);
+  };
+};
+
+<span class="kw">const</span> add = <span class="fn">curry</span>(<span class="fn">(a, b, c)</span> <span class="arrow">=></span> a + b + c);
+<span class="fn">add</span>(<span class="num">1</span>,<span class="num">2</span>,<span class="num">3</span>);       <span class="cmt">// → 6</span>
+<span class="fn">add</span>(<span class="num">1</span>)(<span class="num">2</span>)(<span class="num">3</span>);    <span class="cmt">// → 6</span>
+<span class="fn">add</span>(<span class="num">1</span>,<span class="num">2</span>)(<span class="num">3</span>);    <span class="cmt">// → 6</span>
+<span class="kw">const</span> add5 = <span class="fn">add</span>(<span class="num">5</span>);  <span class="cmt">// нова функція!</span>
+<span class="fn">add5</span>(<span class="num">3</span>)(<span class="num">2</span>);        <span class="cmt">// → 10</span></pre>
+          <div id="curry-result" class="result-box"></div>
+        </div>
+        <div class="card">
+          <h3><span class="badge b-curry">partial</span></h3>
+          <pre><span class="kw">const</span> <span class="fn">partial</span> = <span class="fn">(fn, ...preArgs)</span> <span class="arrow">=></span>
+  <span class="fn">(...laterArgs)</span> <span class="arrow">=></span> <span class="fn">fn</span>(...preArgs, ...laterArgs);
+
+<span class="kw">const</span> <span class="fn">multiply3</span> = <span class="fn">(a, b, c)</span> <span class="arrow">=></span> a * b * c;
+
+<span class="kw">const</span> double_ = <span class="fn">partial</span>(multiply3, <span class="num">2</span>);
+<span class="fn">double_</span>(<span class="num">1</span>, <span class="num">5</span>);  <span class="cmt">// → 2*1*5 = 10</span>
+
+<span class="kw">const</span> triple = <span class="fn">partial</span>(multiply3, <span class="num">3</span>);
+<span class="fn">triple</span>(<span class="num">1</span>, <span class="num">4</span>);   <span class="cmt">// → 3*1*4 = 12</span>
+
+<span class="kw">const</span> times6 = <span class="fn">partial</span>(multiply3, <span class="num">2</span>, <span class="num">3</span>);
+<span class="fn">times6</span>(<span class="num">7</span>);     <span class="cmt">// → 2*3*7 = 42</span></pre>
+          <div id="partial-result" class="result-box"></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>🎮 Каррінг — інтерактивно</h3>
+        <div class="controls">
+          <input id="c-a" type="number" value="5" style="width:70px" placeholder="a">
+          <span style="color:#8b949e">+</span>
+          <input id="c-b" type="number" value="3" style="width:70px" placeholder="b">
+          <span style="color:#8b949e">+</span>
+          <input id="c-c" type="number" value="2" style="width:70px" placeholder="c">
+          <button class="btn btn-blue" onclick="runCurry()">▶ curry(add)(a)(b)(c)</button>
+        </div>
+        <div id="curry-out" class="interactive-out" style="color:#8b949e">← Введіть числа</div>
+      </div>
+    </div>
+
+    <!-- MEMOIZE -->
+    <div id="page-memoize" class="page">
+      <div class="page-title">memoize</div>
+      <div class="page-sub">// Кешування результатів функції для уникнення повторних обчислень</div>
+
+      <div class="card">
+        <h3>Реалізація</h3>
+        <pre><span class="kw">const</span> <span class="fn">memoize</span> = <span class="fn">(fn)</span> <span class="arrow">=></span> {
+  <span class="kw">const</span> cache = <span class="kw">new</span> <span class="fn">Map</span>();
+  <span class="kw">return</span> <span class="fn">(...args)</span> <span class="arrow">=></span> {
+    <span class="kw">const</span> key = <span class="fn">JSON.stringify</span>(args);
+    <span class="kw">if</span> (cache.<span class="fn">has</span>(key)) <span class="kw">return</span> cache.<span class="fn">get</span>(key); <span class="cmt">// з кешу!</span>
+    <span class="kw">const</span> result = <span class="fn">fn</span>(...args);
+    cache.<span class="fn">set</span>(key, result);
+    <span class="kw">return</span> result;
+  };
+};</pre>
+      </div>
+
+      <div class="grid2">
+        <div class="card">
+          <h3>Fibonacci без мемоізації</h3>
+          <div id="fib-without" class="result-box"></div>
+          <button class="btn btn-ghost" style="margin-top:10px;width:100%" onclick="runFibBench()">▶ Порівняти</button>
+        </div>
+        <div class="card">
+          <h3>Fibonacci з мемоізацією</h3>
+          <div id="fib-with" class="result-box"></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>🎮 Мемоізація — інтерактивно</h3>
+        <div class="controls">
+          <input id="memo-n" type="number" value="10" min="1" max="35" style="width:100px" placeholder="n">
+          <button class="btn btn-blue" onclick="runMemo()">▶ fib(n)</button>
+        </div>
+        <div id="memo-out" class="interactive-out" style="color:#8b949e">← Введіть n (до 35)</div>
+      </div>
+    </div>
+
+    <!-- PURE FUNCTIONS -->
+    <div id="page-pure" class="page">
+      <div class="page-title">Чисті функції та імутабельність</div>
+      <div class="page-sub">// Pure functions · No side effects · Immutability</div>
+
+      <div class="grid2">
+        <div class="card" style="border-color:#f8514966">
+          <h3 style="color:#ff7b72">❌ Нечиста функція</h3>
+          <pre><span class="cmt">// Погано: змінює зовнішній стан</span>
+<span class="kw">let</span> total = <span class="num">0</span>;
+<span class="kw">function</span> <span class="fn">addToTotal</span>(n) {
+  total += n;  <span class="cmt">// побічний ефект!</span>
+  <span class="kw">return</span> total;
+}
+<span class="cmt">// Погано: мутує масив</span>
+<span class="kw">function</span> <span class="fn">sortArr</span>(arr) {
+  <span class="kw">return</span> arr.<span class="fn">sort</span>(); <span class="cmt">// змінює оригінал!</span>
+}</pre>
+        </div>
+        <div class="card" style="border-color:#3fb95066">
+          <h3 style="color:#3fb950">✅ Чиста функція</h3>
+          <pre><span class="cmt">// Добре: не залежить від зовнішнього стану</span>
+<span class="kw">const</span> <span class="fn">add</span> = <span class="fn">(a, b)</span> <span class="arrow">=></span> a + b;
+<span class="cmt">// Завжди однаковий результат для тих самих аргументів</span>
+
+<span class="cmt">// Добре: не мутує масив</span>
+<span class="kw">const</span> <span class="fn">sortArr</span> = <span class="fn">(arr)</span> <span class="arrow">=></span>
+  [...arr].<span class="fn">sort</span>(); <span class="cmt">// spread — копія!</span></pre>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>Демонстрація імутабельності</h3>
+        <div class="immut-demo">
+          <div class="immut-box">
+            <h4>Оригінальний масив</h4>
+            <div id="immut-original"></div>
+          </div>
+          <div class="immut-arrow">→</div>
+          <div class="immut-box">
+            <h4>Після трансформації (оригінал не змінився)</h4>
+            <div id="immut-transformed"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>forEach — єдиний побічний ефект дозволений для виводу</h3>
+        <pre><span class="kw">const</span> <span class="fn">myForEach</span> = <span class="fn">(fn)</span> <span class="arrow">=></span> <span class="fn">(arr)</span> <span class="arrow">=></span> {
+  <span class="kw">for</span> (<span class="kw">let</span> i = <span class="num">0</span>; i &lt; arr.length; i++) <span class="fn">fn</span>(arr[i], i, arr);
+}; <span class="cmt">// нічого не повертає — використовується для виводу/логування</span></pre>
+        <div id="foreach-result" class="result-box"></div>
+      </div>
+    </div>
+
+    <!-- CHAIN API -->
+    <div id="page-chain" class="page">
+      <div class="page-title">Chainable API</div>
+      <div class="page-sub">// Ланцюжок трансформацій · Fluent interface · Імутабельний</div>
+
+      <div class="card">
+        <h3>Реалізація Chain</h3>
+        <pre><span class="kw">const</span> <span class="fn">Chain</span> = <span class="fn">(data)</span> <span class="arrow">=></span> ({
+  <span class="fn">map</span>:    <span class="fn">(fn)</span> <span class="arrow">=></span> <span class="fn">Chain</span>(data.<span class="fn">map</span>(fn)),
+  <span class="fn">filter</span>: <span class="fn">(fn)</span> <span class="arrow">=></span> <span class="fn">Chain</span>(data.<span class="fn">filter</span>(fn)),
+  <span class="fn">reduce</span>: <span class="fn">(fn, init)</span> <span class="arrow">=></span> <span class="fn">Chain</span>([data.<span class="fn">reduce</span>(fn, init)]),
+  <span class="fn">sortBy</span>: <span class="fn">(fn)</span> <span class="arrow">=></span> <span class="fn">Chain</span>([...data].<span class="fn">sort</span>(fn)),
+  <span class="fn">take</span>:   <span class="fn">(n)</span>  <span class="arrow">=></span> <span class="fn">Chain</span>(data.<span class="fn">slice</span>(<span class="num">0</span>, n)),
+  <span class="fn">value</span>:  <span class="fn">()</span>   <span class="arrow">=></span> data,   <span class="cmt">// отримати результат</span>
+});</pre>
+      </div>
+
+      <div class="card">
+        <h3>Приклад ланцюжка</h3>
+        <pre><span class="fn">Chain</span>([<span class="num">1</span>,<span class="num">2</span>,<span class="num">3</span>,<span class="num">4</span>,<span class="num">5</span>,<span class="num">6</span>,<span class="num">7</span>,<span class="num">8</span>,<span class="num">9</span>,<span class="num">10</span>])
+  .<span class="fn">filter</span>(<span class="fn">(x)</span> <span class="arrow">=></span> x % <span class="num">2</span> === <span class="num">0</span>)   <span class="cmt">// [2,4,6,8,10]</span>
+  .<span class="fn">map</span>(<span class="fn">(x)</span> <span class="arrow">=></span> x * x)              <span class="cmt">// [4,16,36,64,100]</span>
+  .<span class="fn">filter</span>(<span class="fn">(x)</span> <span class="arrow">=></span> x > <span class="num">10</span>)          <span class="cmt">// [16,36,64,100]</span>
+  .<span class="fn">map</span>(Math.sqrt)                  <span class="cmt">// [4,6,8,10]</span>
+  .<span class="fn">value</span>();                        <span class="cmt">// → [4, 6, 8, 10]</span></pre>
+        <div id="chain-result" class="result-box"></div>
+      </div>
+
+      <div class="card">
+        <h3>🎮 Побудуй ланцюжок</h3>
+        <div class="controls">
+          <input id="chain-in" value="1,2,3,4,5,6,7,8,9,10,11,12" style="width:250px">
+          <select id="chain-op">
+            <option value="even_sq">filter(парні) → map(квадрат)</option>
+            <option value="odd_double">filter(непарні) → map(*2)</option>
+            <option value="gt5_inc">filter(>5) → map(+1)</option>
+            <option value="all_sum">reduce(сума)</option>
+          </select>
+          <button class="btn btn-blue" onclick="runChain()">▶ Виконати</button>
+        </div>
+        <div id="chain-out" class="interactive-out" style="color:#8b949e">← Виберіть операцію</div>
+      </div>
+    </div>
+
+    <!-- PLAYGROUND -->
+    <div id="page-playground" class="page">
+      <div class="page-title">Playground</div>
+      <div class="page-sub">// Всі функції разом — комбінуй як хочеш</div>
+
+      <div class="card">
+        <h3>Реальний кейс: обробка даних про студентів</h3>
+        <pre><span class="kw">const</span> students = [
+  { name: <span class="str">'Іван'</span>,   grade: <span class="num">85</span>, faculty: <span class="str">'IT'</span> },
+  { name: <span class="str">'Марія'</span>,  grade: <span class="num">92</span>, faculty: <span class="str">'Math'</span> },
+  { name: <span class="str">'Олег'</span>,   grade: <span class="num">67</span>, faculty: <span class="str">'IT'</span> },
+  { name: <span class="str">'Анна'</span>,   grade: <span class="num">95</span>, faculty: <span class="str">'Physics'</span> },
+  { name: <span class="str">'Дмитро'</span>, grade: <span class="num">55</span>, faculty: <span class="str">'Math'</span> },
+];
+
+<span class="cmt">// compose: отримати імена відмінників IT факультету</span>
+<span class="kw">const</span> getITTopNames = <span class="fn">pipe</span>(
+  <span class="fn">filter</span>(<span class="fn">(s)</span> <span class="arrow">=></span> s.faculty === <span class="str">'IT'</span>),
+  <span class="fn">filter</span>(<span class="fn">(s)</span> <span class="arrow">=></span> s.grade >= <span class="num">80</span>),
+  <span class="fn">map</span>(<span class="fn">(s)</span> <span class="arrow">=></span> s.name)
+);</pre>
+        <div id="playground-result" class="result-box"></div>
+      </div>
+
+      <div class="card">
+        <h3>🎮 Свій запит</h3>
+        <div class="controls">
+          <select id="pg-fac">
+            <option value="">Всі факультети</option>
+            <option value="IT">IT</option>
+            <option value="Math">Math</option>
+            <option value="Physics">Physics</option>
+          </select>
+          <input id="pg-min" type="number" value="0" style="width:110px" placeholder="Мін. оцінка">
+          <select id="pg-op">
+            <option value="names">Показати імена</option>
+            <option value="grades">Показати оцінки</option>
+            <option value="avg">Середня оцінка</option>
+            <option value="count">Кількість</option>
+          </select>
+          <button class="btn btn-blue" onclick="runPlayground()">▶ Виконати</button>
+        </div>
+        <div id="pg-out" class="interactive-out" style="color:#8b949e">← Налаштуй запит</div>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<script>
+// ============================================================
+// Практична робота 8 — Варіант 1
+// Data Transformation Library — весь код
+// ============================================================
+
+// ── Власні реалізації ────────────────────────────────────────
+var myMap = function(fn) {
+  return function(arr) {
+    var result = [];
+    for (var i = 0; i < arr.length; i++) result.push(fn(arr[i], i, arr));
+    return result;
+  };
+};
+
+var myFilter = function(fn) {
+  return function(arr) {
+    var result = [];
+    for (var i = 0; i < arr.length; i++) if (fn(arr[i], i, arr)) result.push(arr[i]);
+    return result;
+  };
+};
+
+var myReduce = function(fn, initial) {
+  return function(arr) {
+    var acc = initial !== undefined ? initial : arr[0];
+    var start = initial !== undefined ? 0 : 1;
+    for (var i = start; i < arr.length; i++) acc = fn(acc, arr[i], i, arr);
+    return acc;
+  };
+};
+
+var myFind = function(fn) {
+  return function(arr) {
+    for (var i = 0; i < arr.length; i++) if (fn(arr[i])) return arr[i];
+    return undefined;
+  };
+};
+
+var mySome = function(fn) {
+  return function(arr) {
+    for (var i = 0; i < arr.length; i++) if (fn(arr[i])) return true;
+    return false;
+  };
+};
+
+var myEvery = function(fn) {
+  return function(arr) {
+    for (var i = 0; i < arr.length; i++) if (!fn(arr[i])) return false;
+    return true;
+  };
+};
+
+// ── compose / pipe ───────────────────────────────────────────
+var compose = function() {
+  var fns = Array.prototype.slice.call(arguments);
+  return function(x) {
+    return fns.reduceRight(function(acc, fn) { return fn(acc); }, x);
+  };
+};
+
+var pipe = function() {
+  var fns = Array.prototype.slice.call(arguments);
+  return function(x) {
+    return fns.reduce(function(acc, fn) { return fn(acc); }, x);
+  };
+};
+
+// ── curry ────────────────────────────────────────────────────
+var curry = function(fn) {
+  var arity = fn.length;
+  return function curried() {
+    var args = Array.prototype.slice.call(arguments);
+    if (args.length >= arity) return fn.apply(null, args);
+    return function() {
+      var moreArgs = Array.prototype.slice.call(arguments);
+      return curried.apply(null, args.concat(moreArgs));
+    };
+  };
+};
+
+// ── partial ──────────────────────────────────────────────────
+var partial = function(fn) {
+  var preArgs = Array.prototype.slice.call(arguments, 1);
+  return function() {
+    var laterArgs = Array.prototype.slice.call(arguments);
+    return fn.apply(null, preArgs.concat(laterArgs));
+  };
+};
+
+// ── memoize ──────────────────────────────────────────────────
+var memoize = function(fn) {
+  var cache = {};
+  return function() {
+    var key = JSON.stringify(Array.prototype.slice.call(arguments));
+    if (cache.hasOwnProperty(key)) return cache[key];
+    var result = fn.apply(null, arguments);
+    cache[key] = result;
+    return result;
+  };
+};
+
+// ── Chain API ────────────────────────────────────────────────
+var Chain = function(data) {
+  return {
+    map:    function(fn) { return Chain(data.map(fn)); },
+    filter: function(fn) { return Chain(data.filter(fn)); },
+    reduce: function(fn, init) { return Chain([data.reduce(fn, init)]); },
+    sortBy: function(fn) { return Chain(data.slice().sort(fn)); },
+    take:   function(n)  { return Chain(data.slice(0, n)); },
+    value:  function()   { return data; },
+  };
+};
+
+// ── Утиліти ──────────────────────────────────────────────────
+var double_  = function(x) { return x * 2; };
+var square   = function(x) { return x * x; };
+var increment= function(x) { return x + 1; };
+var isEven   = function(x) { return x % 2 === 0; };
+var isOdd    = function(x) { return x % 2 !== 0; };
+var gt5      = function(x) { return x > 5; };
+var toUpper  = function(s) { return s.toUpperCase(); };
+var toLower  = function(s) { return s.toLowerCase(); };
+var trim_    = function(s) { return s.trim(); };
+var reverseStr = function(s) { return s.split('').reverse().join(''); };
+
+// ── Навігація ────────────────────────────────────────────────
+function goPage(id, el) {
+  document.querySelectorAll('.page').forEach(function(p) { p.classList.remove('active'); });
+  document.querySelectorAll('.nb').forEach(function(b) { b.classList.remove('active'); });
+  document.getElementById('page-' + id).classList.add('active');
+  el.classList.add('active');
+  renderPage(id);
+}
+
+// ── Рендер сторінок ──────────────────────────────────────────
+function renderPage(id) {
+  if (id === 'map-filter-reduce') renderMapFilterReduce();
+  if (id === 'find-some-every') renderFindSomeEvery();
+  if (id === 'compose') renderCompose();
+  if (id === 'curry') renderCurry();
+  if (id === 'memoize') renderMemoize();
+  if (id === 'pure') renderPure();
+  if (id === 'chain') renderChain();
+  if (id === 'playground') renderPlayground();
+}
+
+function resultBox(el, title, rows) {
+  var html = '<h4>' + title + '</h4>';
+  for (var i = 0; i < rows.length; i++) {
+    html += '<div class="result-row"><span class="result-key">' + rows[i][0] + '</span><span class="result-val">' + JSON.stringify(rows[i][1]) + '</span></div>';
+  }
+  document.getElementById(el).innerHTML = html;
+}
+
+// MAP FILTER REDUCE
+function renderMapFilterReduce() {
+  var nums = [1,2,3,4,5];
+  resultBox('map-result', '▶ Результат myMap', [
+    ['Вхід', nums],
+    ['myMap(double)', myMap(double_)(nums)],
+    ['myMap(square)', myMap(square)(nums)],
+    ['myMap(increment)', myMap(increment)(nums)],
+  ]);
+
+  var nums2 = [1,2,3,4,5,6,7,8,9,10];
+  resultBox('filter-result', '▶ Результат myFilter', [
+    ['Вхід', nums2],
+    ['myFilter(isEven)', myFilter(isEven)(nums2)],
+    ['myFilter(isOdd)',  myFilter(isOdd)(nums2)],
+    ['myFilter(gt5)',    myFilter(gt5)(nums2)],
+  ]);
+
+  resultBox('reduce-result', '▶ Результат myReduce', [
+    ['Вхід', nums],
+    ['myReduce(sum, 0)',    myReduce(function(a,b){return a+b;}, 0)(nums)],
+    ['myReduce(product,1)', myReduce(function(a,b){return a*b;}, 1)(nums)],
+    ['myReduce(max)',       myReduce(function(a,b){return b>a?b:a;})(nums)],
+  ]);
+}
+
+// FIND SOME EVERY
+function renderFindSomeEvery() {
+  var users = [
+    {name:'Іван', age:17},
+    {name:'Марія', age:25},
+    {name:'Олег', age:30},
+  ];
+  var firstAdult = myFind(function(u){return u.age>=18;})(users);
+  var hasMinor   = mySome(function(u){return u.age<18;})(users);
+  var allAdults  = myEvery(function(u){return u.age>=18;})(users);
+  resultBox('find-result', '▶ Результат на масиві users', [
+    ['myFind(age >= 18)',   firstAdult ? firstAdult.name + ' (' + firstAdult.age + ')' : 'не знайдено'],
+    ['mySome(age < 18)',    hasMinor],
+    ['myEvery(age >= 18)',  allAdults],
+  ]);
+}
+
+// COMPOSE
+function renderCompose() {
+  var input = [1,2,3,4,5];
+  var step1 = myMap(increment)(input);
+  var step2 = myFilter(isEven)(step1);
+  var step3 = myMap(double_)(step2);
+
+  var stepsEl = document.getElementById('compose-steps');
+  var steps = [
+    'Вхід: '+JSON.stringify(input),
+    'myMap(+1): '+JSON.stringify(step1),
+    'myFilter(парні): '+JSON.stringify(step2),
+    'myMap(*2): '+JSON.stringify(step3),
+  ];
+  var html = '';
+  for (var i = 0; i < steps.length; i++) {
+    if (i > 0) html += '<span class="step-arrow">→</span>';
+    html += '<div class="step-box">'+steps[i]+'</div>';
+  }
+  stepsEl.innerHTML = html;
+
+  resultBox('pipe-result', '▶ pipe(trim, toUpper)', [
+    ['Вхід', '  іван петренко  '],
+    ['Результат', pipe(trim_, toUpper)('  іван петренко  ')],
+    ['pipe(inc,double,square)(3)', pipe(increment, double_, square)(3)],
+  ]);
+}
+
+// CURRY
+function renderCurry() {
+  var addCurried = curry(function(a,b,c){ return a+b+c; });
+  var add5 = addCurried(5);
+  resultBox('curry-result', '▶ Результат curry', [
+    ['curry(add)(1,2,3)',    addCurried(1,2,3)],
+    ['curry(add)(1)(2)(3)',  addCurried(1)(2)(3)],
+    ['curry(add)(1,2)(3)',   addCurried(1,2)(3)],
+    ['const add5 = curry(add)(5); add5(3)(2)', add5(3)(2)],
+  ]);
+
+  var mul3 = function(a,b,c){ return a*b*c; };
+  var dbl = partial(mul3, 2);
+  var trpl = partial(mul3, 3);
+  var times6 = partial(mul3, 2, 3);
+  resultBox('partial-result', '▶ Результат partial', [
+    ['partial(mul3, 2)(1, 5)',    dbl(1, 5)],
+    ['partial(mul3, 3)(1, 4)',    trpl(1, 4)],
+    ['partial(mul3, 2, 3)(7)',    times6(7)],
+  ]);
+}
+
+function runCurry() {
+  var a = parseFloat(document.getElementById('c-a').value) || 0;
+  var b = parseFloat(document.getElementById('c-b').value) || 0;
+  var c = parseFloat(document.getElementById('c-c').value) || 0;
+  var addC = curry(function(x,y,z){ return x+y+z; });
+  var step1 = addC(a);
+  var step2 = step1(b);
+  var result = step2(c);
+  document.getElementById('curry-out').innerHTML =
+    '<span style="color:#d2a8ff">curry(add)</span>' +
+    '<span style="color:#ffa657">('+a+')</span>' +
+    '<span style="color:#ffa657">('+b+')</span>' +
+    '<span style="color:#ffa657">('+c+')</span>' +
+    ' <span style="color:#8b949e">=</span> ' +
+    '<span style="color:#3fb950;font-size:20px;font-weight:700">'+result+'</span>' +
+    '<br><span style="color:#8b949e;font-size:12px">add5 = curry(add)('+a+') → add5('+b+') → add5_'+b+'('+c+') → '+result+'</span>';
+}
+
+// MEMOIZE
+function renderMemoize() {}
+
+function runFibBench() {
+  // Без мемоізації
+  var callsWithout = 0;
+  function fibSlow(n) {
+    callsWithout++;
+    if (n <= 1) return n;
+    return fibSlow(n-1) + fibSlow(n-2);
+  }
+
+  // З мемоізацією
+  var callsWith = 0;
+  var fibFast = memoize(function(n) {
+    callsWith++;
+    if (n <= 1) return n;
+    return fibFast(n-1) + fibFast(n-2);
+  });
+
+  var results = [];
+  for (var i = 0; i <= 10; i++) {
+    results.push(fibFast(i));
+  }
+  // скинути для slow
+  callsWithout = 0;
+  var t1 = performance.now();
+  fibSlow(20);
+  var t2 = performance.now();
+
+  callsWith = 0;
+  var t3 = performance.now();
+  fibFast(20);
+  var t4 = performance.now();
+
+  resultBox('fib-without', '▶ fibSlow(20) — без кешу', [
+    ['Виклики функції', callsWithout],
+    ['Час', (t2-t1).toFixed(3)+' мс'],
+  ]);
+  resultBox('fib-with', '▶ fibFast(20) — з кешем', [
+    ['Виклики функції', callsWith],
+    ['Час', (t4-t3).toFixed(3)+' мс'],
+    ['fib(0..10)', results.join(', ')],
+  ]);
+}
+
+function runMemo() {
+  var n = parseInt(document.getElementById('memo-n').value) || 10;
+  if (n > 35) n = 35;
+  var calls = 0;
+  var fibM = memoize(function(x) {
+    calls++;
+    if (x <= 1) return x;
+    return fibM(x-1) + fibM(x-2);
+  });
+  calls = 0;
+  var result = fibM(n);
+  document.getElementById('memo-out').innerHTML =
+    'fib(<span style="color:#ffa657">'+n+'</span>) = <span style="color:#3fb950;font-size:18px;font-weight:700">'+result+'</span>' +
+    '<br><span style="color:#8b949e;font-size:12px">Викликів функції: '+calls+' (замість ~'+Math.pow(2,Math.min(n,20)).toLocaleString()+'+ без кешу)</span>';
+}
+
+// PURE
+function renderPure() {
+  var original = [3, 1, 4, 1, 5, 9, 2, 6];
+  var transformed = original.slice().sort(function(a,b){return b-a;});
+  document.getElementById('immut-original').innerHTML =
+    '<span style="color:#58a6ff">['+original.join(', ')+']</span>' +
+    '<br><span style="color:#8b949e;font-size:11px">Не змінився після sort!</span>';
+  document.getElementById('immut-transformed').innerHTML =
+    '<span style="color:#3fb950">['+transformed.join(', ')+']</span>' +
+    '<br><span style="color:#8b949e;font-size:11px">Новий масив через [...arr].sort()</span>';
+
+  var logs = [];
+  var logFn = function(x) { logs.push(x); };
+  myForEach(logFn)([10, 20, 30]);
+  resultBox('foreach-result', '▶ myForEach(log)([10,20,30])', [
+    ['Виведено елементів', logs.length],
+    ['Значення', logs],
+    ['Повернуто', 'undefined (без повернення)'],
+  ]);
+}
+
+function myForEach(fn) {
+  return function(arr) {
+    for (var i = 0; i < arr.length; i++) fn(arr[i], i, arr);
+  };
+}
+
+// CHAIN
+function renderChain() {
+  var data = [1,2,3,4,5,6,7,8,9,10];
+  var result = Chain(data)
+    .filter(isEven)
+    .map(function(x){return x*x;})
+    .filter(function(x){return x>10;})
+    .map(Math.sqrt)
+    .value();
+  resultBox('chain-result', '▶ Chain([1..10]).filter(парні).map(x²).filter(>10).map(√)', [
+    ['Вхід', data],
+    ['filter(парні)', [2,4,6,8,10]],
+    ['map(x²)', [4,16,36,64,100]],
+    ['filter(>10)', [16,36,64,100]],
+    ['map(√)', result],
+  ]);
+}
+
+function runChain() {
+  var raw = document.getElementById('chain-in').value;
+  var arr = raw.split(',').map(function(x){return parseFloat(x.trim());}).filter(function(x){return !isNaN(x);});
+  var op  = document.getElementById('chain-op').value;
+  var result, desc;
+  if (op==='even_sq') {
+    result = Chain(arr).filter(isEven).map(square).value();
+    desc = 'filter(парні) → map(x²)';
+  } else if (op==='odd_double') {
+    result = Chain(arr).filter(isOdd).map(double_).value();
+    desc = 'filter(непарні) → map(x*2)';
+  } else if (op==='gt5_inc') {
+    result = Chain(arr).filter(gt5).map(increment).value();
+    desc = 'filter(>5) → map(x+1)';
+  } else {
+    result = [Chain(arr).reduce(function(a,b){return a+b;},0).value()[0]];
+    desc = 'reduce(сума)';
+  }
+  document.getElementById('chain-out').innerHTML =
+    '<span style="color:#8b949e">Вхід: </span><span style="color:#58a6ff">'+JSON.stringify(arr)+'</span><br>' +
+    '<span style="color:#8b949e">'+desc+': </span><span style="color:#3fb950;font-weight:700">'+JSON.stringify(result)+'</span>';
+}
+
+// PLAYGROUND
+var playStudents = [
+  {name:'Іван',   grade:85, faculty:'IT'},
+  {name:'Марія',  grade:92, faculty:'Math'},
+  {name:'Олег',   grade:67, faculty:'IT'},
+  {name:'Анна',   grade:95, faculty:'Physics'},
+  {name:'Дмитро', grade:55, faculty:'Math'},
+  {name:'Софія',  grade:88, faculty:'IT'},
+  {name:'Артем',  grade:73, faculty:'Physics'},
+];
+
+function renderPlayground() {
+  var itTop = pipe(
+    function(arr){ return arr.filter(function(s){return s.faculty==='IT';}); },
+    function(arr){ return arr.filter(function(s){return s.grade>=80;}); },
+    function(arr){ return arr.map(function(s){return s.name;}); }
+  )(playStudents);
+  resultBox('playground-result', '▶ IT студенти з оцінкою ≥ 80', [
+    ['Знайдено', itTop.length + ' студентів'],
+    ['Імена', itTop],
+  ]);
+}
+
+function runPlayground() {
+  var fac = document.getElementById('pg-fac').value;
+  var min = parseFloat(document.getElementById('pg-min').value) || 0;
+  var op  = document.getElementById('pg-op').value;
+
+  var filtered = playStudents.filter(function(s) {
+    return (!fac || s.faculty === fac) && s.grade >= min;
+  });
+  var result;
+  if (op === 'names')  result = filtered.map(function(s){return s.name;});
+  else if (op === 'grades') result = filtered.map(function(s){return s.grade;});
+  else if (op === 'avg')    result = filtered.length ? (filtered.reduce(function(a,s){return a+s.grade;},0)/filtered.length).toFixed(2) : 0;
+  else result = filtered.length;
+
+  document.getElementById('pg-out').innerHTML =
+    '<span style="color:#8b949e">Фільтр: </span>' +
+    (fac ? '<span style="color:#58a6ff">faculty='+fac+'</span> ' : '') +
+    '<span style="color:#58a6ff">grade≥'+min+'</span><br>' +
+    '<span style="color:#8b949e">Результат ('+op+'): </span>' +
+    '<span style="color:#3fb950;font-weight:700">'+JSON.stringify(result)+'</span>';
+}
+
+// INTERACTIVE MAP/FILTER/REDUCE
+function runInteractive() {
+  var raw = document.getElementById('arr-input').value;
+  var arr = raw.split(',').map(function(x){return parseFloat(x.trim());}).filter(function(x){return !isNaN(x);});
+  var op  = document.getElementById('op-select').value;
+  var result, desc;
+
+  if (op==='double')   { result=myMap(double_)(arr);       desc='myMap(double)'; }
+  else if(op==='square')  { result=myMap(square)(arr);        desc='myMap(square)'; }
+  else if(op==='even')    { result=myFilter(isEven)(arr);     desc='myFilter(isEven)'; }
+  else if(op==='odd')     { result=myFilter(isOdd)(arr);      desc='myFilter(isOdd)'; }
+  else if(op==='gt5')     { result=myFilter(gt5)(arr);        desc='myFilter(gt5)'; }
+  else if(op==='sum')     { result=myReduce(function(a,b){return a+b;},0)(arr); desc='myReduce(sum)'; }
+  else                    { result=myReduce(function(a,b){return b>a?b:a;})(arr); desc='myReduce(max)'; }
+
+  document.getElementById('interactive-out').innerHTML =
+    '<span style="color:#8b949e">Вхід: </span><span style="color:#58a6ff">'+JSON.stringify(arr)+'</span><br>' +
+    '<span style="color:#8b949e">'+desc+'(вхід) = </span>' +
+    '<span style="color:#3fb950;font-weight:700">'+JSON.stringify(result)+'</span>';
+}
+
+// PIPE interactive
+function runPipe() {
+  var input = document.getElementById('pipe-input').value;
+  var ops = {
+    trim: trim_,
+    upper: toUpper,
+    lower: toLower,
+    rev: reverseStr
+  };
+  var op1 = document.getElementById('pipe-op1').value;
+  var op2 = document.getElementById('pipe-op2').value;
+  var result = pipe(ops[op1], ops[op2])(input);
+  document.getElementById('pipe-out').innerHTML =
+    '<span style="color:#8b949e">Вхід: </span><span style="color:#a5d6ff">"'+input+'"</span><br>' +
+    '<span style="color:#8b949e">pipe('+op1+', '+op2+') = </span>' +
+    '<span style="color:#3fb950;font-weight:700">"'+result+'"</span>';
+}
+
+// ── Ініціалізація ────────────────────────────────────────────
+renderMapFilterReduce();
+</script>
+</body>
+</html>
