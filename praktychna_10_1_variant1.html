@@ -1,0 +1,984 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Практична 10.1 — Promises</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: monospace; background: #0d1117; color: #c9d1d9; font-size: 14px; }
+header { background: #161b22; border-bottom: 1px solid #30363d; padding: 16px 28px; display: flex; justify-content: space-between; align-items: center; }
+header h1 { color: #f0883e; font-size: 18px; }
+header p { color: #8b949e; font-size: 12px; }
+.tag { background: #f0883e33; color: #f0883e; border: 1px solid #f0883e66; padding: 3px 10px; border-radius: 20px; font-size: 11px; }
+.layout { display: grid; grid-template-columns: 240px 1fr; min-height: calc(100vh - 57px); }
+aside { background: #161b22; border-right: 1px solid #30363d; padding: 16px 12px; }
+aside h2 { font-size: 10px; color: #8b949e; letter-spacing: 2px; text-transform: uppercase; margin-bottom: 10px; padding-left: 8px; }
+.nb { display: block; width: 100%; background: none; border: 1px solid transparent; color: #8b949e; padding: 9px 12px; border-radius: 6px; cursor: pointer; text-align: left; font-family: monospace; font-size: 12px; margin-bottom: 3px; }
+.nb:hover { color: #c9d1d9; background: #21262d; border-color: #30363d; }
+.nb.active { color: #f0883e; background: #f0883e1a; border-color: #f0883e66; }
+main { padding: 24px; overflow-y: auto; }
+.page { display: none; } .page.active { display: block; }
+.page-title { font-size: 20px; color: #e6edf3; margin-bottom: 4px; }
+.page-sub { color: #8b949e; font-size: 12px; margin-bottom: 22px; }
+.card { background: #161b22; border: 1px solid #30363d; border-radius: 8px; padding: 20px; margin-bottom: 16px; }
+.card h3 { font-size: 11px; color: #8b949e; text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 14px; }
+.grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+pre { background: #0d1117; border: 1px solid #30363d; border-radius: 6px; padding: 14px; font-size: 12px; overflow-x: auto; white-space: pre-wrap; line-height: 1.7; margin-bottom: 12px; }
+.kw{color:#ff7b72} .fn{color:#d2a8ff} .str{color:#a5d6ff} .num{color:#79c0ff} .cmt{color:#8b949e}
+.controls { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 14px; align-items: center; }
+input, select { background: #21262d; border: 1px solid #30363d; color: #c9d1d9; padding: 8px 12px; border-radius: 6px; font-family: monospace; font-size: 13px; outline: none; }
+input:focus, select:focus { border-color: #f0883e; }
+.btn { padding: 9px 18px; border-radius: 6px; border: none; cursor: pointer; font-family: monospace; font-size: 13px; font-weight: 700; transition: all .2s; }
+.btn-orange { background: #f0883e; color: #0d1117; } .btn-orange:hover { background: #e8741f; }
+.btn-green  { background: #238636; color: #fff; }  .btn-green:hover  { background: #2ea043; }
+.btn-red    { background: #da3633; color: #fff; }  .btn-red:hover    { background: #f85149; }
+.btn-gray   { background: none; border: 1px solid #30363d; color: #8b949e; } .btn-gray:hover { border-color: #f0883e; color: #f0883e; }
+.btn:disabled { opacity: .4; cursor: not-allowed; }
+
+/* Pipeline */
+.pipeline { display: flex; align-items: center; gap: 0; margin: 16px 0; flex-wrap: wrap; }
+.step { display: flex; flex-direction: column; align-items: center; gap: 6px; min-width: 110px; }
+.step-icon { width: 52px; height: 52px; border-radius: 50%; border: 2px solid #30363d; display: flex; align-items: center; justify-content: center; font-size: 22px; background: #21262d; transition: all .4s; }
+.step-label { font-size: 11px; color: #8b949e; text-align: center; }
+.step-time { font-size: 10px; color: #8b949e; }
+.step-arrow { color: #30363d; font-size: 20px; margin: 0 4px; padding-bottom: 20px; }
+.step.pending .step-icon { border-color: #30363d; }
+.step.loading .step-icon { border-color: #f0883e; background: #f0883e1a; animation: pulse 1s infinite; }
+.step.success .step-icon { border-color: #3fb950; background: #3fb9501a; }
+.step.error   .step-icon { border-color: #f85149; background: #f851491a; }
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.5} }
+
+/* Log */
+.log-box { background: #0d1117; border: 1px solid #30363d; border-radius: 6px; padding: 14px; max-height: 320px; overflow-y: auto; font-size: 12px; }
+.log-entry { display: flex; gap: 10px; padding: 5px 0; border-bottom: 1px solid #21262d; align-items: flex-start; }
+.log-entry:last-child { border-bottom: none; }
+.log-time { color: #8b949e; white-space: nowrap; min-width: 65px; }
+.log-badge { padding: 1px 7px; border-radius: 3px; font-size: 10px; font-weight: 700; white-space: nowrap; }
+.lb-info    { background: #1f6feb33; color: #79c0ff; }
+.lb-ok      { background: #3fb9501a; color: #3fb950; }
+.lb-err     { background: #f851491a; color: #f85149; }
+.lb-warn    { background: #e3b3411a; color: #e3b341; }
+.lb-finally { background: #d2a8ff1a; color: #d2a8ff; }
+.log-msg { color: #c9d1d9; flex: 1; }
+
+/* Stats */
+.stat-row { display: grid; grid-template-columns: repeat(4,1fr); gap: 12px; margin-bottom: 16px; }
+.stat { background: #21262d; border: 1px solid #30363d; border-radius: 8px; padding: 14px; text-align: center; }
+.stat-val { font-size: 26px; font-weight: 700; color: #f0883e; }
+.stat-lbl { font-size: 11px; color: #8b949e; margin-top: 3px; }
+
+/* Order card */
+.order-card { background: #21262d; border: 1px solid #30363d; border-radius: 8px; padding: 14px; margin-bottom: 8px; }
+.order-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
+.order-id { color: #f0883e; font-weight: 700; }
+.order-status { padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 700; }
+.os-pending   { background: #e3b3411a; color: #e3b341; }
+.os-running   { background: #1f6feb33; color: #79c0ff; }
+.os-success   { background: #3fb9501a; color: #3fb950; }
+.os-failed    { background: #f851491a; color: #f85149; }
+.order-items  { font-size: 12px; color: #8b949e; }
+
+/* Promise viz */
+.promise-viz { display: flex; flex-direction: column; gap: 8px; }
+.promise-row { display: flex; align-items: center; gap: 10px; padding: 8px 12px; background: #21262d; border-radius: 6px; border-left: 3px solid #30363d; }
+.promise-row.pending  { border-left-color: #e3b341; }
+.promise-row.resolved { border-left-color: #3fb950; }
+.promise-row.rejected { border-left-color: #f85149; }
+.promise-state { font-size: 11px; font-weight: 700; min-width: 70px; }
+.ps-pending  { color: #e3b341; }
+.ps-resolved { color: #3fb950; }
+.ps-rejected { color: #f85149; }
+
+table { width: 100%; border-collapse: collapse; }
+th { padding: 9px 12px; text-align: left; font-size: 10px; color: #8b949e; text-transform: uppercase; letter-spacing: 1px; border-bottom: 1px solid #30363d; }
+td { padding: 9px 12px; border-bottom: 1px solid #21262d; font-size: 12px; }
+tr:last-child td { border-bottom: none; }
+tr:hover td { background: #f0883e08; }
+.progress-bar { height: 6px; background: #30363d; border-radius: 3px; overflow: hidden; margin-top: 4px; }
+.progress-fill { height: 100%; border-radius: 3px; background: linear-gradient(90deg, #f0883e, #ffa657); transition: width .3s; }
+</style>
+</head>
+<body>
+
+<header>
+  <div><h1>// food_order_promises.js</h1><p>Практична 10.1 · Варіант 1 · Promise chains · .then() · .catch() · .finally()</p></div>
+  <span class="tag">10 балів</span>
+</header>
+
+<div class="layout">
+  <aside>
+    <h2>Розділи</h2>
+    <button class="nb active" onclick="goPage('overview',this)">📖 Огляд Promise</button>
+    <button class="nb" onclick="goPage('order',this)">🍕 Замовлення їжі</button>
+    <button class="nb" onclick="goPage('chain',this)">🔗 Promise chains</button>
+    <button class="nb" onclick="goPage('errors',this)">⚠️ Обробка помилок</button>
+    <button class="nb" onclick="goPage('all',this)">⚡ Promise.all</button>
+    <button class="nb" onclick="goPage('race',this)">🏁 Promise.race</button>
+    <button class="nb" onclick="goPage('allsettled',this)">📊 Promise.allSettled</button>
+    <button class="nb" onclick="goPage('eventloop',this)">🔄 Event Loop</button>
+  </aside>
+
+  <main>
+
+    <!-- ОГЛЯД -->
+    <div id="page-overview" class="page active">
+      <div class="page-title">Promise в JavaScript</div>
+      <div class="page-sub">// Об'єкт що представляє майбутній результат асинхронної операції</div>
+      <div class="card">
+        <h3>Стани Promise</h3>
+        <div class="promise-viz" id="promise-states">
+          <div class="promise-row pending">
+            <span class="promise-state ps-pending">⏳ pending</span>
+            <span style="color:#8b949e">Початковий стан — операція ще виконується</span>
+          </div>
+          <div class="promise-row resolved">
+            <span class="promise-state ps-resolved">✅ fulfilled</span>
+            <span style="color:#8b949e">Операція завершилась успішно — є результат</span>
+          </div>
+          <div class="promise-row rejected">
+            <span class="promise-state ps-rejected">❌ rejected</span>
+            <span style="color:#8b949e">Операція завершилась з помилкою</span>
+          </div>
+        </div>
+      </div>
+      <div class="card">
+        <h3>Синтаксис</h3>
+        <pre><span class="cmt">// Створення Promise</span>
+<span class="kw">const</span> myPromise = <span class="kw">new</span> <span class="fn">Promise</span>((resolve, reject) <span class="fn">=></span> {
+  <span class="cmt">// асинхронна операція</span>
+  setTimeout(() <span class="fn">=></span> {
+    <span class="kw">if</span> (success) <span class="fn">resolve</span>({ data: <span class="str">'результат'</span> });
+    <span class="kw">else</span>         <span class="fn">reject</span>(<span class="kw">new</span> <span class="fn">Error</span>(<span class="str">'помилка'</span>));
+  }, <span class="num">1000</span>);
+});
+
+<span class="cmt">// Використання через .then() .catch() .finally()</span>
+myPromise
+  .<span class="fn">then</span>(result  <span class="fn">=></span> console.<span class="fn">log</span>(result))
+  .<span class="fn">catch</span>(error  <span class="fn">=></span> console.<span class="fn">error</span>(error))
+  .<span class="fn">finally</span>(()  <span class="fn">=></span> console.<span class="fn">log</span>(<span class="str">'завжди виконується'</span>));</pre>
+      </div>
+      <div class="card">
+        <h3>🎮 Живий приклад</h3>
+        <div class="controls">
+          <select id="ov-chance">
+            <option value="1">100% успіх</option>
+            <option value="0.7">70% успіх</option>
+            <option value="0.5">50% успіх</option>
+            <option value="0">0% (завжди помилка)</option>
+          </select>
+          <button class="btn btn-orange" onclick="runBasicPromise()">▶ new Promise()</button>
+        </div>
+        <div id="ov-out" class="log-box" style="min-height:80px"></div>
+      </div>
+    </div>
+
+    <!-- ЗАМОВЛЕННЯ -->
+    <div id="page-order" class="page">
+      <div class="page-title">Система замовлення їжі</div>
+      <div class="page-sub">// checkAvailability → reserveItems → processPayment → scheduleDelivery</div>
+
+      <div class="card">
+        <h3>Нове замовлення</h3>
+        <div class="controls">
+          <input id="o-name" value="Піца Маргарита" style="width:180px">
+          <input id="o-amount" type="number" value="250" style="width:100px" placeholder="сума ₴">
+          <select id="o-fail">
+            <option value="0.2">20% шанс помилки</option>
+            <option value="0">Без помилок</option>
+            <option value="0.5">50% шанс помилки</option>
+            <option value="1">Завжди помилка</option>
+          </select>
+          <button class="btn btn-orange" id="order-btn" onclick="startOrder()">🍕 Зробити замовлення</button>
+        </div>
+
+        <!-- Pipeline -->
+        <div class="pipeline" id="pipeline">
+          <div class="step pending" id="step-0">
+            <div class="step-icon">🔍</div>
+            <div class="step-label">Перевірка наявності</div>
+            <div class="step-time" id="st-0"></div>
+          </div>
+          <div class="step-arrow">→</div>
+          <div class="step pending" id="step-1">
+            <div class="step-icon">📦</div>
+            <div class="step-label">Резервування</div>
+            <div class="step-time" id="st-1"></div>
+          </div>
+          <div class="step-arrow">→</div>
+          <div class="step pending" id="step-2">
+            <div class="step-icon">💳</div>
+            <div class="step-label">Оплата</div>
+            <div class="step-time" id="st-2"></div>
+          </div>
+          <div class="step-arrow">→</div>
+          <div class="step pending" id="step-3">
+            <div class="step-icon">🚗</div>
+            <div class="step-label">Доставка</div>
+            <div class="step-time" id="st-3"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>Лог замовлення</h3>
+        <div class="log-box" id="order-log"><div style="color:#8b949e">← Зробіть замовлення</div></div>
+      </div>
+
+      <div class="card">
+        <h3>Історія замовлень</h3>
+        <div id="order-history"></div>
+      </div>
+    </div>
+
+    <!-- CHAIN -->
+    <div id="page-chain" class="page">
+      <div class="page-title">Promise chains — .then()</div>
+      <div class="page-sub">// Ланцюжок промісів — кожен .then() отримує результат попереднього</div>
+      <div class="card">
+        <pre><span class="fn">checkAvailability</span>(orderId)
+  .<span class="fn">then</span>(result <span class="fn">=></span> {
+    <span class="cmt">// result — дані від checkAvailability</span>
+    <span class="kw">return</span> <span class="fn">reserveItems</span>(result.orderId);
+  })
+  .<span class="fn">then</span>(result <span class="fn">=></span> {
+    <span class="cmt">// result — дані від reserveItems</span>
+    <span class="kw">return</span> <span class="fn">processPayment</span>(result.orderId, result.amount);
+  })
+  .<span class="fn">then</span>(result <span class="fn">=></span> {
+    <span class="kw">return</span> <span class="fn">scheduleDelivery</span>(result.orderId);
+  })
+  .<span class="fn">catch</span>(error <span class="fn">=></span> {
+    <span class="cmt">// Спрацює при будь-якій помилці в ланцюжку</span>
+    console.<span class="fn">error</span>(<span class="str">'Помилка:'</span>, error.message);
+  })
+  .<span class="fn">finally</span>(() <span class="fn">=></span> {
+    <span class="cmt">// Виконається завжди — успіх або помилка</span>
+    <span class="fn">cleanup</span>();
+  });</pre>
+      </div>
+      <div class="card">
+        <h3>🎮 Покрокова демонстрація</h3>
+        <div class="controls">
+          <button class="btn btn-orange" onclick="runChainDemo()">▶ Запустити ланцюжок</button>
+          <button class="btn btn-gray" onclick="clearChainLog()">Очистити</button>
+        </div>
+        <div class="log-box" id="chain-log"><div style="color:#8b949e">← Натисни ▶</div></div>
+      </div>
+      <div class="card">
+        <h3>Передача даних між .then()</h3>
+        <div class="controls">
+          <button class="btn btn-green" onclick="runDataChain()">▶ Показати передачу даних</button>
+        </div>
+        <div class="log-box" id="data-chain-log"><div style="color:#8b949e">← Натисни ▶</div></div>
+      </div>
+    </div>
+
+    <!-- ERRORS -->
+    <div id="page-errors" class="page">
+      <div class="page-title">Обробка помилок</div>
+      <div class="page-sub">// .catch() · reject() · try-catch у Promise · Retry логіка</div>
+      <div class="grid2">
+        <div class="card">
+          <h3>Централізований .catch()</h3>
+          <pre><span class="cmt">// Одна обробка для всього ланцюжка</span>
+step1()
+  .<span class="fn">then</span>(step2)
+  .<span class="fn">then</span>(step3)
+  .<span class="fn">catch</span>(err <span class="fn">=></span> {
+    <span class="cmt">// Спрацює для будь-якого кроку</span>
+    <span class="fn">handleError</span>(err);
+  });</pre>
+        </div>
+        <div class="card">
+          <h3>Відновлення після помилки</h3>
+          <pre><span class="cmt">// .catch() може повернути значення</span>
+step1()
+  .<span class="fn">then</span>(step2)
+  .<span class="fn">catch</span>(err <span class="fn">=></span> {
+    <span class="kw">return</span> { fallback: <span class="kw">true</span> }; <span class="cmt">// відновлення</span>
+  })
+  .<span class="fn">then</span>(result <span class="fn">=></span> {
+    <span class="cmt">// result.fallback === true</span>
+  });</pre>
+        </div>
+      </div>
+      <div class="card">
+        <h3>🎮 Симуляція помилок на різних етапах</h3>
+        <div class="controls">
+          <select id="err-step">
+            <option value="0">Помилка на кроці 1 (checkAvailability)</option>
+            <option value="1">Помилка на кроці 2 (reserveItems)</option>
+            <option value="2">Помилка на кроці 3 (processPayment)</option>
+            <option value="3">Помилка на кроці 4 (scheduleDelivery)</option>
+            <option value="-1">Без помилок</option>
+          </select>
+          <button class="btn btn-red" onclick="runErrorDemo()">▶ Симулювати помилку</button>
+        </div>
+        <div class="log-box" id="err-log"><div style="color:#8b949e">← Вибери де трапиться помилка</div></div>
+      </div>
+      <div class="card">
+        <h3>🎮 Retry логіка (3 спроби)</h3>
+        <div class="controls">
+          <input id="retry-chance" type="number" value="70" min="0" max="100" style="width:100px" placeholder="% помилки">
+          <button class="btn btn-orange" onclick="runRetry()">▶ Запустити з retry</button>
+        </div>
+        <div class="log-box" id="retry-log"><div style="color:#8b949e">← Натисни ▶</div></div>
+      </div>
+    </div>
+
+    <!-- ALL -->
+    <div id="page-all" class="page">
+      <div class="page-title">Promise.all</div>
+      <div class="page-sub">// Паралельне виконання — чекає на ВСІ проміси</div>
+      <div class="card">
+        <pre><span class="cmt">// Всі запити виконуються ПАРАЛЕЛЬНО</span>
+<span class="fn">Promise</span>.<span class="fn">all</span>([
+  <span class="fn">fetchMenu</span>(),         <span class="cmt">// 1с</span>
+  <span class="fn">fetchRestaurants</span>(), <span class="cmt">// 1.5с</span>
+  <span class="fn">fetchReviews</span>()      <span class="cmt">// 0.8с</span>
+]).<span class="fn">then</span>(([menu, restaurants, reviews]) <span class="fn">=></span> {
+  <span class="cmt">// Всі результати одразу — через 1.5с (найдовший)</span>
+});
+<span class="cmt">// Якщо хоч один rejected — весь Promise.all rejected</span></pre>
+      </div>
+      <div class="card">
+        <h3>🎮 Паралельне завантаження даних ресторану</h3>
+        <div class="controls">
+          <button class="btn btn-orange" id="all-btn" onclick="runAll()">▶ Promise.all()</button>
+          <button class="btn btn-green" id="seq-btn" onclick="runSequential()">▶ Послідовно (для порівняння)</button>
+        </div>
+        <div id="all-progress" style="margin:10px 0"></div>
+        <div class="log-box" id="all-log"><div style="color:#8b949e">← Натисни ▶</div></div>
+      </div>
+    </div>
+
+    <!-- RACE -->
+    <div id="page-race" class="page">
+      <div class="page-title">Promise.race</div>
+      <div class="page-sub">// Повертає результат ПЕРШОГО завершеного промісу</div>
+      <div class="card">
+        <pre><span class="cmt">// Виграє найшвидший</span>
+<span class="fn">Promise</span>.<span class="fn">race</span>([
+  <span class="fn">fetchFromServer1</span>(), <span class="cmt">// ~1.2с</span>
+  <span class="fn">fetchFromServer2</span>(), <span class="cmt">// ~0.8с ← виграє</span>
+  <span class="fn">fetchFromServer3</span>(), <span class="cmt">// ~1.5с</span>
+  <span class="kw">new</span> <span class="fn">Promise</span>((_, reject) <span class="fn">=></span>
+    setTimeout(() <span class="fn">=></span> <span class="fn">reject</span>(<span class="kw">new</span> <span class="fn">Error</span>(<span class="str">'Timeout!'</span>)), <span class="num">3000</span>)
+  ) <span class="cmt">// таймаут 3с</span>
+]);</pre>
+      </div>
+      <div class="card">
+        <h3>🎮 Три сервери доставки — хто швидше?</h3>
+        <div class="controls">
+          <button class="btn btn-orange" id="race-btn" onclick="runRace()">🏁 Promise.race()</button>
+        </div>
+        <div id="race-viz" style="margin:12px 0"></div>
+        <div class="log-box" id="race-log"><div style="color:#8b949e">← Натисни 🏁</div></div>
+      </div>
+    </div>
+
+    <!-- ALLSETTLED -->
+    <div id="page-allsettled" class="page">
+      <div class="page-title">Promise.allSettled</div>
+      <div class="page-sub">// Чекає на ВСІ проміси незалежно від результату</div>
+      <div class="card">
+        <pre><span class="cmt">// На відміну від Promise.all — не зупиняється при помилці</span>
+<span class="fn">Promise</span>.<span class="fn">allSettled</span>([
+  <span class="fn">fetchMenu</span>(),       <span class="cmt">// може провалитись</span>
+  <span class="fn">fetchReviews</span>(),    <span class="cmt">// може провалитись</span>
+  <span class="fn">fetchPromos</span>()      <span class="cmt">// може провалитись</span>
+]).<span class="fn">then</span>(results <span class="fn">=></span> {
+  results.<span class="fn">forEach</span>(result <span class="fn">=></span> {
+    <span class="kw">if</span> (result.status === <span class="str">'fulfilled'</span>)
+      console.<span class="fn">log</span>(result.value);
+    <span class="kw">else</span>
+      console.<span class="fn">error</span>(result.reason);
+  });
+});</pre>
+      </div>
+      <div class="card">
+        <h3>🎮 Завантаження даних з кількох джерел</h3>
+        <div class="controls">
+          <button class="btn btn-orange" onclick="runAllSettled()">▶ Promise.allSettled()</button>
+        </div>
+        <div class="log-box" id="settled-log"><div style="color:#8b949e">← Натисни ▶</div></div>
+      </div>
+      <div class="card">
+        <h3>Promise.all vs Promise.allSettled</h3>
+        <table>
+          <thead><tr><th>Метод</th><th>При помилці</th><th>Результат</th><th>Коли використовувати</th></tr></thead>
+          <tbody>
+            <tr><td style="color:#f0883e">Promise.all</td><td style="color:#f85149">Зупиняється</td><td style="color:#8b949e">Масив значень</td><td style="color:#8b949e">Всі потрібні</td></tr>
+            <tr><td style="color:#d2a8ff">Promise.allSettled</td><td style="color:#3fb950">Продовжує</td><td style="color:#8b949e">{status, value/reason}</td><td style="color:#8b949e">Деякі можуть впасти</td></tr>
+            <tr><td style="color:#79c0ff">Promise.race</td><td style="color:#e3b341">Перший виграє</td><td style="color:#8b949e">Одне значення</td><td style="color:#8b949e">Потрібен найшвидший</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- EVENT LOOP -->
+    <div id="page-eventloop" class="page">
+      <div class="page-title">Event Loop</div>
+      <div class="page-sub">// Як JavaScript виконує асинхронний код</div>
+      <div class="card">
+        <h3>Порядок виконання</h3>
+        <pre><span class="fn">console</span>.<span class="fn">log</span>(<span class="str">'1 — синхронний'</span>);        <span class="cmt">// виконається 1-м</span>
+
+setTimeout(() <span class="fn">=></span>
+  console.<span class="fn">log</span>(<span class="str">'3 — macrotask'</span>), <span class="num">0</span>);    <span class="cmt">// виконається 3-м</span>
+
+<span class="fn">Promise</span>.<span class="fn">resolve</span>()
+  .<span class="fn">then</span>(() <span class="fn">=></span>
+    console.<span class="fn">log</span>(<span class="str">'2 — microtask'</span>));       <span class="cmt">// виконається 2-м</span>
+
+console.<span class="fn">log</span>(<span class="str">'1.5 — синхронний'</span>);      <span class="cmt">// виконається 1.5-м</span>
+
+<span class="cmt">// Вивід: 1 → 1.5 → 2 → 3</span>
+<span class="cmt">// Мікрозадачі (Promise) виконуються раніше макрозадач (setTimeout)</span></pre>
+      </div>
+      <div class="card">
+        <h3>🎮 Демонстрація порядку виконання</h3>
+        <div class="controls">
+          <button class="btn btn-orange" onclick="runEventLoop()">▶ Запустити</button>
+        </div>
+        <div class="log-box" id="el-log"><div style="color:#8b949e">← Натисни ▶</div></div>
+      </div>
+      <div class="card">
+        <h3>Callback → Promise → async/await</h3>
+        <div class="controls">
+          <button class="btn btn-green" onclick="runCallbackVsPromise()">▶ Порівняти підходи</button>
+        </div>
+        <div class="log-box" id="cbvsp-log"><div style="color:#8b949e">← Натисни ▶</div></div>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<script>
+// ── Утиліти ──────────────────────────────────────────────────
+var logEl = function(id, type, msg) {
+  var box = document.getElementById(id);
+  if (!box) return;
+  var now = new Date().toLocaleTimeString('uk', {hour:'2-digit',minute:'2-digit',second:'2-digit'});
+  var labels = {info:'INFO',ok:'OK',err:'ERR',warn:'WARN',finally:'FINALLY'};
+  var entry = document.createElement('div');
+  entry.className = 'log-entry';
+  entry.innerHTML = '<span class="log-time">'+now+'</span>'+
+    '<span class="log-badge lb-'+type+'">'+labels[type]+'</span>'+
+    '<span class="log-msg">'+msg+'</span>';
+  if (box.firstChild && box.firstChild.style && box.firstChild.style.color) box.innerHTML = '';
+  box.appendChild(entry);
+  box.scrollTop = box.scrollHeight;
+};
+
+var delay = function(ms) { return new Promise(function(r){setTimeout(r,ms);}); };
+
+var mayFail = function(chance) {
+  return new Promise(function(resolve, reject) {
+    if (Math.random() < chance) reject(new Error('Випадкова помилка'));
+    else resolve();
+  });
+};
+
+// ── Навігація ─────────────────────────────────────────────────
+function goPage(id, el) {
+  document.querySelectorAll('.page').forEach(function(p){p.classList.remove('active');});
+  document.querySelectorAll('.nb').forEach(function(b){b.classList.remove('active');});
+  document.getElementById('page-'+id).classList.add('active');
+  el.classList.add('active');
+}
+
+// ── Огляд ─────────────────────────────────────────────────────
+function runBasicPromise() {
+  var chance = 1 - parseFloat(document.getElementById('ov-chance').value);
+  var box = 'ov-out';
+  logEl(box,'info','new Promise() створено — стан: pending ⏳');
+  new Promise(function(resolve, reject) {
+    setTimeout(function() {
+      if (Math.random() < chance) reject(new Error('Операція відхилена'));
+      else resolve({ data: 'Дані успішно отримано', timestamp: Date.now() });
+    }, 1000);
+  })
+  .then(function(result) {
+    logEl(box,'ok','Promise fulfilled ✅ → '+JSON.stringify(result));
+  })
+  .catch(function(err) {
+    logEl(box,'err','Promise rejected ❌ → '+err.message);
+  })
+  .finally(function() {
+    logEl(box,'finally','.finally() — виконався незалежно від результату');
+  });
+}
+
+// ── Замовлення їжі ────────────────────────────────────────────
+var orderCount = 0;
+var orders = [];
+
+function setStep(idx, state, time) {
+  var el = document.getElementById('step-'+idx);
+  el.className = 'step '+state;
+  if (time) document.getElementById('st-'+idx).textContent = time+'мс';
+}
+
+function resetPipeline() {
+  for(var i=0;i<4;i++) {
+    setStep(i,'pending','');
+    document.getElementById('st-'+i).textContent='';
+  }
+}
+
+function checkAvailability(orderId, failChance) {
+  setStep(0,'loading');
+  var t = Date.now();
+  return new Promise(function(resolve, reject) {
+    setTimeout(function() {
+      if (Math.random() < failChance) {
+        setStep(0,'error');
+        reject(new Error('Товар відсутній на складі'));
+      } else {
+        setStep(0,'success', Date.now()-t);
+        resolve({ orderId: orderId, status: 'available' });
+      }
+    }, 1000);
+  });
+}
+
+function reserveItems(data, failChance) {
+  setStep(1,'loading');
+  var t = Date.now();
+  return new Promise(function(resolve, reject) {
+    setTimeout(function() {
+      if (Math.random() < failChance) {
+        setStep(1,'error');
+        reject(new Error('Не вдалося зарезервувати товар'));
+      } else {
+        setStep(1,'success', Date.now()-t);
+        resolve({ orderId: data.orderId, reserved: true, amount: parseFloat(document.getElementById('o-amount').value)||250 });
+      }
+    }, 1000);
+  });
+}
+
+function processPayment(data, failChance) {
+  setStep(2,'loading');
+  var t = Date.now();
+  return new Promise(function(resolve, reject) {
+    setTimeout(function() {
+      if (Math.random() < failChance) {
+        setStep(2,'error');
+        reject(new Error('Оплата відхилена банком'));
+      } else {
+        setStep(2,'success', Date.now()-t);
+        resolve({ orderId: data.orderId, paid: true, amount: data.amount });
+      }
+    }, 1500);
+  });
+}
+
+function scheduleDelivery(data, failChance) {
+  setStep(3,'loading');
+  var t = Date.now();
+  return new Promise(function(resolve, reject) {
+    setTimeout(function() {
+      if (Math.random() < failChance) {
+        setStep(3,'error');
+        reject(new Error('Немає вільних кур\'єрів'));
+      } else {
+        setStep(3,'success', Date.now()-t);
+        resolve({ orderId: data.orderId, deliveryTime: '30-45 хв', estimatedTime: new Date(Date.now()+2400000).toLocaleTimeString() });
+      }
+    }, 1000);
+  });
+}
+
+function startOrder() {
+  var btn = document.getElementById('order-btn');
+  btn.disabled = true;
+  resetPipeline();
+  orderCount++;
+  var orderId = 'ORD-'+String(orderCount).padStart(4,'0');
+  var name = document.getElementById('o-name').value;
+  var failChance = parseFloat(document.getElementById('o-fail').value);
+  var logId = 'order-log';
+  document.getElementById(logId).innerHTML = '';
+  var startTime = Date.now();
+  var order = { id: orderId, name: name, status: 'running', startTime: startTime };
+  orders.unshift(order);
+  renderHistory();
+
+  logEl(logId,'info','🍕 Нове замовлення '+orderId+': "'+name+'" — '+document.getElementById('o-amount').value+'₴');
+  logEl(logId,'info','Шанс помилки на кожному кроці: '+(failChance*100)+'%');
+
+  checkAvailability(orderId, failChance)
+    .then(function(r) {
+      logEl(logId,'ok','✅ Крок 1: Наявність підтверджена — '+JSON.stringify(r));
+      return reserveItems(r, failChance);
+    })
+    .then(function(r) {
+      logEl(logId,'ok','✅ Крок 2: Товар зарезервовано на суму '+r.amount+'₴');
+      return processPayment(r, failChance);
+    })
+    .then(function(r) {
+      logEl(logId,'ok','✅ Крок 3: Оплата '+r.amount+'₴ успішна');
+      return scheduleDelivery(r, failChance);
+    })
+    .then(function(r) {
+      logEl(logId,'ok','✅ Крок 4: Доставку заплановано — очікуйте '+r.deliveryTime);
+      logEl(logId,'ok','🎉 Замовлення '+orderId+' успішно оформлено! Час: '+(Date.now()-startTime)+'мс');
+      order.status = 'success'; order.time = Date.now()-startTime;
+    })
+    .catch(function(err) {
+      logEl(logId,'err','❌ Помилка: '+err.message);
+      logEl(logId,'warn','Замовлення '+orderId+' скасовано. Час: '+(Date.now()-startTime)+'мс');
+      order.status = 'failed'; order.time = Date.now()-startTime;
+    })
+    .finally(function() {
+      logEl(logId,'finally','🔄 .finally() — очищення стану, розблокування кнопки');
+      btn.disabled = false;
+      renderHistory();
+    });
+}
+
+function renderHistory() {
+  var html = '';
+  for(var i=0;i<Math.min(orders.length,5);i++) {
+    var o=orders[i];
+    var cls = o.status==='success'?'os-success':o.status==='failed'?'os-failed':o.status==='running'?'os-running':'os-pending';
+    var icon = o.status==='success'?'✅':o.status==='failed'?'❌':o.status==='running'?'⏳':'⏸';
+    html+='<div class="order-card">'+
+      '<div class="order-header">'+
+      '<span class="order-id">'+o.id+'</span>'+
+      '<span class="order-status '+cls+'">'+icon+' '+o.status+'</span>'+
+      '</div>'+
+      '<div class="order-items">'+o.name+(o.time?' · '+o.time+'мс':'')+'</div>'+
+    '</div>';
+  }
+  document.getElementById('order-history').innerHTML = html || '<div style="color:#8b949e;font-size:12px">Поки немає замовлень</div>';
+}
+
+// ── Promise chains demo ───────────────────────────────────────
+function runChainDemo() {
+  var id='chain-log';
+  document.getElementById(id).innerHTML='';
+  logEl(id,'info','Запускаємо ланцюжок промісів...');
+
+  new Promise(function(resolve) {
+    logEl(id,'info','Крок 1: checkAvailability() — pending ⏳');
+    setTimeout(function(){ logEl(id,'ok','Крок 1: resolve({ orderId:"001" })'); resolve({orderId:'001'}); },800);
+  })
+  .then(function(r) {
+    logEl(id,'info','→ .then() отримав: '+JSON.stringify(r));
+    logEl(id,'info','Крок 2: reserveItems() — pending ⏳');
+    return new Promise(function(resolve){
+      setTimeout(function(){ logEl(id,'ok','Крок 2: resolve({ reserved:true })'); resolve({orderId:r.orderId,amount:250}); },800);
+    });
+  })
+  .then(function(r) {
+    logEl(id,'info','→ .then() отримав: '+JSON.stringify(r));
+    logEl(id,'info','Крок 3: processPayment() — pending ⏳');
+    return new Promise(function(resolve){
+      setTimeout(function(){ logEl(id,'ok','Крок 3: resolve({ paid:true })'); resolve({orderId:r.orderId,paid:true}); },1000);
+    });
+  })
+  .then(function(r) {
+    logEl(id,'info','→ .then() отримав: '+JSON.stringify(r));
+    logEl(id,'info','Крок 4: scheduleDelivery() — pending ⏳');
+    return new Promise(function(resolve){
+      setTimeout(function(){ logEl(id,'ok','Крок 4: resolve({ delivery:"30-45хв" })'); resolve({delivery:'30-45хв'}); },800);
+    });
+  })
+  .then(function(r) {
+    logEl(id,'ok','🎉 Ланцюжок завершено: '+JSON.stringify(r));
+  })
+  .finally(function(){
+    logEl(id,'finally','.finally() — завжди виконується');
+  });
+}
+
+function clearChainLog(){ document.getElementById('chain-log').innerHTML='<div style="color:#8b949e">← Натисни ▶</div>'; }
+
+function runDataChain() {
+  var id='data-chain-log';
+  document.getElementById(id).innerHTML='';
+  logEl(id,'info','Демонстрація передачі даних між .then()');
+
+  Promise.resolve(10)
+    .then(function(n){
+      logEl(id,'info','.then(n='+n+') → повертає n*2 = '+(n*2));
+      return n*2;
+    })
+    .then(function(n){
+      logEl(id,'info','.then(n='+n+') → повертає n+5 = '+(n+5));
+      return n+5;
+    })
+    .then(function(n){
+      logEl(id,'info','.then(n='+n+') → повертає "Result: "+n');
+      return 'Result: '+n;
+    })
+    .then(function(s){
+      logEl(id,'ok','Фінальний результат: "'+s+'"');
+    });
+}
+
+// ── Errors ────────────────────────────────────────────────────
+function runErrorDemo() {
+  var errorStep = parseInt(document.getElementById('err-step').value);
+  var id = 'err-log';
+  document.getElementById(id).innerHTML='';
+  var steps = ['checkAvailability','reserveItems','processPayment','scheduleDelivery'];
+  logEl(id,'info','Запускаємо ланцюжок'+(errorStep>=0?' — помилка на кроці '+(errorStep+1)+' ('+steps[errorStep]+')':'— без помилок'));
+
+  var makeStep = function(i, data) {
+    return new Promise(function(resolve, reject) {
+      setTimeout(function() {
+        if (i === errorStep) {
+          reject(new Error('Помилка на кроці '+(i+1)+': '+steps[i]+' failed'));
+        } else {
+          resolve(Object.assign({}, data, {step: i+1, ok: true}));
+        }
+      }, 600);
+    });
+  };
+
+  makeStep(0, {orderId:'ERR-001'})
+    .then(function(r){ logEl(id,'ok','Крок 1 ✅'); return makeStep(1, r); })
+    .then(function(r){ logEl(id,'ok','Крок 2 ✅'); return makeStep(2, r); })
+    .then(function(r){ logEl(id,'ok','Крок 3 ✅'); return makeStep(3, r); })
+    .then(function(r){ logEl(id,'ok','Крок 4 ✅ — всі кроки успішні!'); })
+    .catch(function(err){ logEl(id,'err','❌ .catch() спрацював: '+err.message); logEl(id,'warn','Всі наступні .then() пропущені!'); })
+    .finally(function(){ logEl(id,'finally','.finally() — виконується завжди'); });
+}
+
+function runRetry() {
+  var chance = parseFloat(document.getElementById('retry-chance').value)/100;
+  var id = 'retry-log';
+  document.getElementById(id).innerHTML='';
+  var attempts = 0;
+  var maxAttempts = 3;
+
+  function attempt() {
+    attempts++;
+    logEl(id,'info','Спроба '+attempts+'/'+maxAttempts+'...');
+    return new Promise(function(resolve, reject) {
+      setTimeout(function() {
+        if (Math.random() < chance) reject(new Error('Сервер недоступний'));
+        else resolve({ data: 'OK', attempt: attempts });
+      }, 600);
+    });
+  }
+
+  function retry(attemptsLeft) {
+    return attempt().catch(function(err) {
+      logEl(id,'warn','❌ Спроба '+attempts+' провалилась: '+err.message);
+      if (attemptsLeft > 1) {
+        logEl(id,'info','Повторна спроба через 500мс...');
+        return delay(500).then(function(){ return retry(attemptsLeft-1); });
+      }
+      throw new Error('Всі '+maxAttempts+' спроби вичерпано');
+    });
+  }
+
+  retry(maxAttempts)
+    .then(function(r){ logEl(id,'ok','✅ Успіх на спробі '+r.attempt+'!'); })
+    .catch(function(err){ logEl(id,'err','❌ '+err.message); });
+}
+
+// ── Promise.all ───────────────────────────────────────────────
+function runAll() {
+  var id='all-log';
+  document.getElementById(id).innerHTML='';
+  document.getElementById('all-progress').innerHTML='';
+  var completed = 0;
+  var total = 4;
+  var startTime = Date.now();
+
+  function updateProgress() {
+    completed++;
+    var pct = (completed/total*100).toFixed(0);
+    document.getElementById('all-progress').innerHTML=
+      '<div style="color:#8b949e;font-size:12px;margin-bottom:4px">Завантажено: '+completed+'/'+total+' ('+pct+'%)</div>'+
+      '<div class="progress-bar"><div class="progress-fill" style="width:'+pct+'%"></div></div>';
+    logEl(id,'info','Завантажено '+completed+'/'+total+' запитів');
+  }
+
+  function makeRequest(name, ms) {
+    return delay(ms).then(function() { updateProgress(); return {source:name, data:'✅ Дані отримано', time:ms+'мс'}; });
+  }
+
+  logEl(id,'info','Promise.all() — всі 4 запити стартують ОДНОЧАСНО');
+
+  Promise.all([
+    makeRequest('Меню', 1000),
+    makeRequest('Ресторани', 1500),
+    makeRequest('Відгуки', 800),
+    makeRequest('Акції', 1200),
+  ]).then(function(results) {
+    logEl(id,'ok','✅ Promise.all() завершено за '+(Date.now()-startTime)+'мс');
+    results.forEach(function(r){ logEl(id,'ok',r.source+': '+r.data+' ('+r.time+')'); });
+  }).catch(function(err){ logEl(id,'err','❌ Один запит провалився — весь Promise.all зупинено: '+err.message); });
+}
+
+function runSequential() {
+  var id='all-log';
+  document.getElementById(id).innerHTML='';
+  var startTime = Date.now();
+  logEl(id,'info','Послідовне виконання — кожен запит чекає попередній');
+
+  delay(1000).then(function(){
+    logEl(id,'ok','Меню: ✅ (1000мс)');
+    return delay(1500);
+  }).then(function(){
+    logEl(id,'ok','Ресторани: ✅ (1500мс)');
+    return delay(800);
+  }).then(function(){
+    logEl(id,'ok','Відгуки: ✅ (800мс)');
+    return delay(1200);
+  }).then(function(){
+    logEl(id,'ok','Акції: ✅ (1200мс)');
+    logEl(id,'warn','⏱ Послідовно: '+(Date.now()-startTime)+'мс (vs ~1500мс паралельно)');
+  });
+}
+
+// ── Promise.race ──────────────────────────────────────────────
+function runRace() {
+  var id='race-log';
+  document.getElementById(id).innerHTML='';
+  var btn=document.getElementById('race-btn');
+  btn.disabled=true;
+
+  var servers = [
+    {name:'Сервер А 🟠', color:'#f0883e'},
+    {name:'Сервер Б 🟢', color:'#3fb950'},
+    {name:'Сервер В 🔵', color:'#79c0ff'},
+  ];
+
+  // Генеруємо випадкові затримки
+  var times = servers.map(function(){return Math.floor(Math.random()*1500)+500;});
+  var vizHtml = '';
+  servers.forEach(function(s,i){
+    vizHtml+='<div style="margin-bottom:10px">'+
+      '<div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px">'+
+      '<span style="color:'+s.color+'">'+s.name+'</span>'+
+      '<span style="color:#8b949e" id="race-time-'+i+'">'+times[i]+'мс</span>'+
+      '</div>'+
+      '<div class="progress-bar" style="height:10px">'+
+      '<div id="race-bar-'+i+'" class="progress-fill" style="width:0%;background:'+s.color+'"></div>'+
+      '</div></div>';
+  });
+  document.getElementById('race-viz').innerHTML=vizHtml;
+
+  // Анімуємо прогрес
+  var startTime=Date.now();
+  var animInterval=setInterval(function(){
+    var elapsed=Date.now()-startTime;
+    servers.forEach(function(s,i){
+      var pct=Math.min(100,(elapsed/times[i]*100)).toFixed(0);
+      document.getElementById('race-bar-'+i).style.width=pct+'%';
+    });
+  },50);
+
+  logEl(id,'info','🏁 Promise.race() — стартуємо три сервери одночасно!');
+  logEl(id,'info','Час відповіді: '+servers.map(function(s,i){return s.name+': '+times[i]+'мс';}).join(' | '));
+
+  var promises = servers.map(function(s,i){
+    return delay(times[i]).then(function(){ return {server:s.name, time:times[i]}; });
+  });
+  promises.push(new Promise(function(_,reject){ setTimeout(function(){reject(new Error('Timeout 3000мс'));},3000); }));
+
+  Promise.race(promises).then(function(r){
+    clearInterval(animInterval);
+    servers.forEach(function(s,i){ document.getElementById('race-bar-'+i).style.width='100%'; });
+    logEl(id,'ok','🏆 Виграв '+r.server+' — відповів за '+r.time+'мс!');
+    logEl(id,'info','Інші сервери продовжують виконуватись у фоні, але результат вже є');
+    btn.disabled=false;
+  }).catch(function(err){
+    clearInterval(animInterval);
+    logEl(id,'err','❌ '+err.message);
+    btn.disabled=false;
+  });
+}
+
+// ── Promise.allSettled ────────────────────────────────────────
+function runAllSettled() {
+  var id='settled-log';
+  document.getElementById(id).innerHTML='';
+  logEl(id,'info','Promise.allSettled() — завантажуємо дані з 5 джерел');
+
+  var sources = [
+    {name:'Меню ресторану', failChance:0.1},
+    {name:'Відгуки клієнтів', failChance:0.5},
+    {name:'Акції та знижки', failChance:0.7},
+    {name:'Геолокація', failChance:0.2},
+    {name:'Рекомендації', failChance:0.4},
+  ];
+
+  var promises = sources.map(function(s){
+    return delay(Math.random()*1000+500).then(function(){
+      if(Math.random()<s.failChance) throw new Error(s.name+' недоступний');
+      return {source:s.name, data:'✅ Отримано'};
+    });
+  });
+
+  Promise.allSettled(promises).then(function(results){
+    var ok=0, fail=0;
+    results.forEach(function(r,i){
+      if(r.status==='fulfilled'){
+        ok++;
+        logEl(id,'ok','✅ '+r.value.source+': '+r.value.data);
+      } else {
+        fail++;
+        logEl(id,'err','❌ '+r.reason.message);
+      }
+    });
+    logEl(id,'info','Підсумок: успішних='+ok+', провалених='+fail+' з '+results.length);
+    logEl(id,'ok','Promise.allSettled чекав на ВСІ навіть якщо деякі провалились');
+  });
+}
+
+// ── Event Loop ────────────────────────────────────────────────
+function runEventLoop() {
+  var id='el-log';
+  document.getElementById(id).innerHTML='';
+  var step=0;
+  function log(type,msg){ setTimeout(function(){ logEl(id,type,'['+step+'] '+msg); step++; }, step*0); }
+
+  logEl(id,'info','=== Синхронний код ===');
+  logEl(id,'ok','console.log("1 — синхронний") — виконується ЗАРАЗ');
+
+  setTimeout(function(){
+    logEl(id,'warn','console.log("3 — macrotask") — setTimeout(0) — після мікрозадач');
+  },0);
+
+  Promise.resolve().then(function(){
+    logEl(id,'info','console.log("2 — microtask") — Promise.then() — перед setTimeout');
+  });
+
+  logEl(id,'ok','console.log("1.5 — синхронний") — ще синхронний код');
+  logEl(id,'info','--- Синхронний код завершено. Далі: мікрозадачі → макрозадачі ---');
+}
+
+function runCallbackVsPromise() {
+  var id='cbvsp-log';
+  document.getElementById(id).innerHTML='';
+  logEl(id,'info','=== Callback підхід (callback hell) ===');
+  logEl(id,'warn','getData(function(a) { getMore(a, function(b) { save(b, function(c) { ... }) }) })');
+  logEl(id,'err','Проблема: важко читати, важко обробляти помилки → "Callback Hell"');
+
+  setTimeout(function(){
+    logEl(id,'info','=== Promise підхід (ланцюжок) ===');
+    logEl(id,'ok','getData().then(getMore).then(save).catch(handleError) — читабельно!');
+
+    setTimeout(function(){
+      logEl(id,'info','=== async/await (сучасний підхід) ===');
+      logEl(id,'ok','const a = await getData();  // виглядає як синхронний код');
+      logEl(id,'ok','const b = await getMore(a); // але насправді асинхронний');
+      logEl(id,'ok','await save(b);');
+    },300);
+  },300);
+}
+</script>
+</body>
+</html>
